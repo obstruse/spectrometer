@@ -1,4 +1,5 @@
 # Spectrometer
+![](/images/intensity2.png)
 
 Based on Public Lab Spectrometer: https://publiclab.org/notes/abdul/10-13-2016/desktop-spectrometry-starter-kit-3-0-instructions
 
@@ -22,10 +23,17 @@ Camera connected to Raspberry Pi III, running Python/Pygame, Gnuplot, Bash
 
 ## Spectrum Averaging
 
-Use the Python script to select a line through the spectrum, which then gets averaged over time and duplicated vertically:
+[spectralAverage.py](/python/spectralAverage.py)
+
+Use the Python script to select a line through the spectrum, which will get averaged over time and duplicated vertically:
 
 ![Averaged](/images/cfl-spectrum-20181215-123051.jpg)
 ## Calibration
+
+There are (at least) two ways to calibrate the output:
+- calibrate to features in the spectrum (CFL Calibrate)
+- calibrate to features of the camera (CIS Calibrate)
+
 
 ### CFL Calibration
 The CFL spectrum has several clear landmarks: [CFL Landmarks](https://commons.wikimedia.org/wiki/File:Fluorescent_lighting_spectrum_peaks_labelled.svg)
@@ -40,7 +48,7 @@ But what about “featureless” spectra:
 
 ![Broad](/images/air-spectrum-20181215-164105-Overlay.png)
  
-It’s got three prominent bumps which correspond to the peak RGB sensitivities in the Color Imaging Sensor (CIS):
+It’s doesn't have any prominate peaks, but it does have three prominent bumps which correspond to the peak RGB sensitivities in the Color Imaging Sensor (CIS):
 
 - Red: 580 nm
 - Green: 515 nm
@@ -48,7 +56,7 @@ It’s got three prominent bumps which correspond to the peak RGB sensitivities 
 
 [Camera Spectral Response](https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr)
 
-Using those values for the scale gives a fairly good match to the CFL calibration:
+Using those values for the scale gives a good match to the CFL calibration:
 
 ![CFL-CIS](/images/CFL-CIS.png)
 
@@ -58,5 +66,5 @@ Seems like you should be able to take the RGB values of a pixel, convert it to H
 
 
 ## Plotting
-
+### Overlay
 ### Intensity

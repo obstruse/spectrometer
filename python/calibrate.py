@@ -63,10 +63,15 @@ parser.add_argument('CSVfile')
 args = parser.parse_args()
 CSVfile = pathlib.Path(args.CSVfile).with_suffix('.csv')
 CALfile = pathlib.Path(args.CSVfile).with_suffix('.cal')
+JPGfile = pathlib.Path(args.CSVfile).with_suffix('.jpg')
+BASEfile = os.path.basename(args.CSVfile)
 print(f"CSVfile: {CSVfile}, CALfile: {CALfile}")
 
 # read data file
-with open(CSVfile, mode='r') as file:
+DATAfile = CSVfile
+if os.path.exists(CALfile) :
+    DATAfile = CALfile
+with open(DATAfile, mode='r') as file:
     data = list(csv.reader(file))
 
 # calibration values from CSV file
@@ -80,7 +85,7 @@ resolution = (len(data)-1,256)
 
 # initialize display environment
 pygame.display.init()
-pygame.display.set_caption('Calibrate')
+pygame.display.set_caption('Calibrate - '+BASEfile)
 
 pygame.init()
 
@@ -91,11 +96,16 @@ BLACK = (0,0,0)
 RED   = (255,0,0)
 BLUE  = (0,0,255)
 GREEN = (0,255,0)
-YELLOW = (0,255,255)
+CYAN = (0,255,255)
+
+use_CIS = False         # normally CFL landmarks, toggle to use CIS landmarks
 
 # surfaces
 # display surface
 lcd = pygame.display.set_mode(resolution)
+
+# background
+backgroundSurface = pygame.image.load(JPGfile)
 
 # graph
 graphSurface = pygame.surface.Surface(resolution)
@@ -109,63 +119,101 @@ HGrect = pygame.Rect((0,0),               (resolution[0]/2,resolution[1]))
 
 # create graph
 lastPos = (0,0)
-graphSurface.fill(WHITE)
+graphSurface.fill(BLACK)
+graphSurface.set_colorkey(BLACK)
 for P in data[1::]:
     currentPos = (int(P[0]),resolution[1]-float(P[1]))
     if lastPos != (0,0) :
-        pygame.draw.line(graphSurface,BLACK,lastPos,currentPos,2)
+        pygame.draw.line(graphSurface,WHITE,lastPos,currentPos,2)
 
     lastPos = currentPos
+
+# draw dashed line
+def dashedVLine(surface, xPos, len, color=WHITE, dashLen=8, width=1) :
+    yLast = 0
+    yPos = 0
+    while ( yPos < len):
+        if yPos % (dashLen * 2) == 0 :
+            yLast = yPos
+        else:
+            pygame.draw.line(surface,color,(xPos,yLast),(xPos,yPos),width)
+        
+        yPos += dashLen
+
+
 
 # create calibrate
 def calibrate():
     m = (Eu611 - Hg436) / (611.0 - 436.0) 
     b = 611.0 * m - Eu611
 
-    calibrateSurface.fill(WHITE)
-    calibrateSurface.set_colorkey(WHITE)
+    calibrateSurface.fill(BLACK)
+    calibrateSurface.set_colorkey(BLACK)
 
     # calibration points
-    pygame.draw.line(calibrateSurface,RED,(Hg436,0),(Hg436,resolution[1]),2)
-    pygame.draw.line(calibrateSurface,RED,(Eu611,0),(Eu611,resolution[1]),2)
+    #pygame.draw.line(calibrateSurface,RED,(Hg436,0),(Hg436,resolution[1]),2)
+    #pygame.draw.line(calibrateSurface,RED,(Eu611,0),(Eu611,resolution[1]),2)
 
-    # cfl landmarks
-    landmarks = [405, 487, 542, 546]
-    for L in landmarks:
-        P = L*m-b
-        pygame.draw.line(calibrateSurface,BLUE,(P,0),(P,resolution[1]),1)
+    if use_CIS :
+        # calibration points
+        dashedVLine(calibrateSurface,475*m-b,resolution[1],WHITE,12,3)
+        dashedVLine(calibrateSurface,580*m-b,resolution[1],WHITE,12,3)
+        
+        # CIS landmarks
+        # https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr
+        landmarks = [475,510,580]
+        for L in landmarks:
+            P = L*m-b
+            #pygame.draw.line(calibrateSurface,CYAN,(P,0),(P,resolution[1]),3)
+            dashedVLine(calibrateSurface,P,resolution[1],WHITE,4,1)
+    else:
+        # calibration points
+        dashedVLine(calibrateSurface,Hg436,resolution[1],WHITE,12,3)
+        dashedVLine(calibrateSurface,Eu611,resolution[1],WHITE,12,3)
+        # cfl landmarks
+        landmarks = [405, 487, 542, 546]
+        for L in landmarks:
+            P = L*m-b
+            #pygame.draw.line(calibrateSurface,BLUE,(P,0),(P,resolution[1]),1)
+            dashedVLine(calibrateSurface,P,resolution[1],WHITE,4,1)
 
-    # LED landmarks
-    # https://gpnmag.com/article/white-leds-for-plant-applications/
-    landmarks = [432,556,637]
-    for L in landmarks:
-        P = L*m-b
-        pygame.draw.line(calibrateSurface,GREEN,(P,0),(P,resolution[1]),1)
+    ## LED landmarks
+    ## https://gpnmag.com/article/white-leds-for-plant-applications/
+    #landmarks = [432,556,637]
+    #for L in landmarks:
+    #    P = L*m-b
+    #    pygame.draw.line(calibrateSurface,GREEN,(P,0),(P,resolution[1]),1)
 
-    # CIS landmarks
-    # https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr
-    landmarks = [475,510,580]
-    for L in landmarks:
-        P = L*m-b
-        pygame.draw.line(calibrateSurface,YELLOW,(P,0),(P,resolution[1]),3)
+    ## CIS landmarks
+    ## https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr
+    #landmarks = [475,510,580]
+    #for L in landmarks:
+    #    P = L*m-b
+    #    pygame.draw.line(calibrateSurface,CYAN,(P,0),(P,resolution[1]),3)
 
 
     # camera limits
     limits = [400,700]
     for L in limits:
         P = L*m-b
-        pygame.draw.line(calibrateSurface,BLACK,(P,7*resolution[1]/8),(P,resolution[1]),3)
+        pygame.draw.line(calibrateSurface,RED,(P,7*resolution[1]/8),(P,resolution[1]),3)
 
 
 calibrate()
 
+lcd.blit(backgroundSurface,(0,0))
 lcd.blit(graphSurface,(0,0))
 lcd.blit(calibrateSurface,(0,0))
 pygame.display.flip()
 
 
+# throttle
+timer = pygame.time.Clock()
+
 going = True
 while going:
+    timer.tick(10)
+
     events = pygame.event.get()
     for e in events:
         if (e.type == MOUSEBUTTONDOWN):
@@ -189,6 +237,9 @@ while going:
             if e.key == K_KP9:
                 Eu611 += 1
 
+            if e.key == K_c:
+                use_CIS = not use_CIS
+
             calibrate()
 
             if e.key == K_s:        # save calibration in .CAL file
@@ -204,6 +255,7 @@ while going:
         if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
             going = False
 
+        lcd.blit(backgroundSurface,(0,0))
         lcd.blit(graphSurface,(0,0))
         lcd.blit(calibrateSurface,(0,0))
         pygame.display.flip()
