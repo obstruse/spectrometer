@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import os
-#os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 """
     read CSV file
@@ -124,7 +124,6 @@ def createGraph():
     graphSurface.fill(BLACK)
     graphSurface.set_colorkey(BLACK)
     if use_CIS:
-        print("graph cis")
         for P in range(resolution[0]):
             currentPos = (P, resolution[1] - backgroundSurface.get_at((P,10))[0])
             if lastPos != (0,0) :
@@ -199,7 +198,7 @@ def calibrate():
         dashedVLine(calibrateSurface,Hg436,resolution[1],WHITE,12,3)
         dashedVLine(calibrateSurface,Eu611,resolution[1],WHITE,12,3)
         # cfl landmarks
-        landmarks = [405, 487, 542, 546]
+        landmarks = [405, 436, 487, 542, 546, 611]
         for L in landmarks:
             P = L*m-b
             #pygame.draw.line(calibrateSurface,BLUE,(P,0),(P,resolution[1]),1)
