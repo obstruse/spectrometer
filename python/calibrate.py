@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import os
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+#os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 """
     read CSV file
@@ -118,15 +118,42 @@ EUrect = pygame.Rect((resolution[0]/2,0), (resolution[0]/2,resolution[1]))
 HGrect = pygame.Rect((0,0),               (resolution[0]/2,resolution[1]))
 
 # create graph
-lastPos = (0,0)
-graphSurface.fill(BLACK)
-graphSurface.set_colorkey(BLACK)
-for P in data[1::]:
-    currentPos = (int(P[0]),resolution[1]-float(P[1]))
-    if lastPos != (0,0) :
-        pygame.draw.line(graphSurface,WHITE,lastPos,currentPos,2)
+def createGraph():
+    lastPos = (0,0)
+    graphSurface.fill(BLACK)
+    graphSurface.set_colorkey(BLACK)
+    if use_CIS:
+        print("graph cis")
+        for P in range(resolution[0]):
+            currentPos = (P, resolution[1] - backgroundSurface.get_at((P,10))[0])
+            if lastPos != (0,0) :
+                pygame.draw.line(graphSurface,RED,lastPos,currentPos,2)
 
-    lastPos = currentPos
+            lastPos = currentPos
+
+        lastPos = (0,0)
+        for P in range(resolution[0]):
+            currentPos = (P, resolution[1] - backgroundSurface.get_at((P,10))[1])
+            if lastPos != (0,0) :
+                pygame.draw.line(graphSurface,GREEN,lastPos,currentPos,2)
+
+            lastPos = currentPos
+
+        lastPos = (0,0)
+        for P in range(resolution[0]):
+            currentPos = (P, resolution[1] - backgroundSurface.get_at((P,10))[2])
+            if lastPos != (0,0) :
+                pygame.draw.line(graphSurface,BLUE,lastPos,currentPos,2)
+
+            lastPos = currentPos
+
+    else:
+        for P in data[1::]:
+            currentPos = (int(P[0]),resolution[1]-float(P[1]))
+            if lastPos != (0,0) :
+                pygame.draw.line(graphSurface,WHITE,lastPos,currentPos,2)
+
+            lastPos = currentPos
 
 # draw dashed line
 def dashedVLine(surface, xPos, len, color=WHITE, dashLen=8, width=1) :
@@ -139,7 +166,6 @@ def dashedVLine(surface, xPos, len, color=WHITE, dashLen=8, width=1) :
             pygame.draw.line(surface,color,(xPos,yLast),(xPos,yPos),width)
         
         yPos += dashLen
-
 
 
 # create calibrate
@@ -156,12 +182,13 @@ def calibrate():
 
     if use_CIS :
         # calibration points
-        dashedVLine(calibrateSurface,475*m-b,resolution[1],WHITE,12,3)
-        dashedVLine(calibrateSurface,580*m-b,resolution[1],WHITE,12,3)
+        dashedVLine(calibrateSurface,474*m-b,resolution[1],WHITE,12,3)
+        dashedVLine(calibrateSurface,595*m-b,resolution[1],WHITE,12,3)
         
         # CIS landmarks
         # https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr
-        landmarks = [475,510,580]
+        #landmarks = [475,510,580]
+        landmarks = [474,536,595]
         for L in landmarks:
             P = L*m-b
             #pygame.draw.line(calibrateSurface,CYAN,(P,0),(P,resolution[1]),3)
@@ -198,7 +225,10 @@ def calibrate():
         P = L*m-b
         pygame.draw.line(calibrateSurface,RED,(P,7*resolution[1]/8),(P,resolution[1]),3)
 
+def nmCol(nm):
+    return nm*m-b
 
+createGraph()
 calibrate()
 
 lcd.blit(backgroundSurface,(0,0))
@@ -220,9 +250,20 @@ while going:
             # get mouse position
             (x,y) = pygame.mouse.get_pos()
             if HGrect.collidepoint((x,y)):
-                Hg436 = x
+                if use_CIS:
+                    m = (Eu611 - x) / (611.0 - 475.0) 
+                    b = 611.0 * m - Eu611
+                    Hg436 = nmCol(436)
+                else:
+                    Hg436 = x
+            
             if EUrect.collidepoint((x,y)):
-                Eu611 = x
+                if use_CIS:   
+                    m = (x - Hg436) / (580.0 - 436.0) 
+                    b = 580.0 * m - x
+                    Eu611 = nmCol(611)
+                else:
+                    Eu611 = x
 
             calibrate()
 
@@ -239,6 +280,7 @@ while going:
 
             if e.key == K_c:
                 use_CIS = not use_CIS
+                createGraph()
 
             calibrate()
 
