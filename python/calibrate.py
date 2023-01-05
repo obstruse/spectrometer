@@ -61,11 +61,11 @@ parser = argparse.ArgumentParser(description='Calibrate')
 parser.add_argument('CSVfile')
 
 args = parser.parse_args()
-CSVfile = pathlib.Path(args.CSVfile).with_suffix('.csv')
-CALfile = pathlib.Path(args.CSVfile).with_suffix('.cal')
-JPGfile = pathlib.Path(args.CSVfile).with_suffix('.jpg')
+CSVfile = str(pathlib.Path(args.CSVfile).with_suffix('.csv'))
+CALfile = str(pathlib.Path(args.CSVfile).with_suffix('.cal'))
+JPGfile = str(pathlib.Path(args.CSVfile).with_suffix('.jpg'))
 BASEfile = os.path.basename(args.CSVfile)
-print(f"CSVfile: {CSVfile}, CALfile: {CALfile}")
+print(f"CSVfile: {CSVfile}, CALfile: {CALfile}, JPGfile: {JPGfile}")
 
 # read data file
 DATAfile = CSVfile
@@ -81,6 +81,7 @@ print(f"Hg436: {Hg436}, Eu611: {Eu611}")
 
 # width determined by length of CSV file; height is 256 for data
 resolution = (len(data)-1,256)
+
 (x,y) = (0,0)
 
 # initialize display environment
