@@ -69,8 +69,20 @@ lcd = pygame.display.set_mode(resolution)
 cam = pygame.camera.Camera(videoDev,resolution)
 cam.start()
 
-#subprocess.call(shlex.split('uvcdynctrl --set="Power Line Frequency" 0'))
+#utility functions
+def setV4L2( ctrl, value ) :
+    return subprocess.run(shlex.split(f"v4l2-ctl -d {videoDev} --set-ctrl {ctrl}={value}"),stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL).returncode
 
+def getV4L2( ctrl ) :
+    ret = subprocess.run(shlex.split(f"v4l2-ctl -d {videoDev} --get-ctrl {ctrl}"),capture_output=True, text=True)
+    if ret.returncode == 0 :
+        return ret.stdout.split(" ")[1].strip()
+    else :
+        return ""
+
+
+camBrightness = int(getV4L2("brightness"))
+print(f"Brightness: {camBrightness}")
 image = cam.get_image()
 
 
@@ -143,10 +155,8 @@ while active:
 			# convert lineSurfArray to lineSurface
 			lineSurface = pygame.surfarray.make_surface(lineSurfArray)
 			# fill lcd with lineSurface
-			for yIncr in range (averageItems):
-				yDisplayRow += 1
-				yDisplayRow = yDisplayRow % height
-				lcd.blit(lineSurface, (0,yDisplayRow))
+			for i in range (height):
+				lcd.blit(lineSurface, (0,i))
 
 		else:
 			lcd.blit(image, (0,0))
