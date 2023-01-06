@@ -103,7 +103,7 @@ while active:
 		if (e.type == KEYUP and e.key == K_a):
 			noAverage = not noAverage
 
-		if (e.type == KEYUP and e.key == K_KP_ENTER):
+		if (e.type == KEYUP and (e.key == K_KP_ENTER or e.key == K_RETURN)):
 			timestr = time.strftime("%Y%m%d-%H%M%S")
 
 			name = input("Name: ")
