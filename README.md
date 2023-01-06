@@ -1,23 +1,23 @@
 # Spectrometer
 ![](/images/intensity2.png)
 
-Based on Public Lab Spectrometer: https://publiclab.org/notes/abdul/10-13-2016/desktop-spectrometry-starter-kit-3-0-instructions
+Based on Public Lab Spectrometer 3.0: https://publiclab.org/notes/abdul/10-13-2016/desktop-spectrometry-starter-kit-3-0-instructions
 
 Using a USB camera module similar to:
 
 - [Arducam OV5648](https://www.arducam.com/product/arducam-ov5648-auto-focus-usb-camera-ub0238-6/)
 - [Newcamermodule 5MP CMOS Sensor](https://newcameramodule.com/product/small-size-5mp-cmos-sensor-usb-2-0-camera-module/)
 
-Camera, diffraction grating, and slit are mounted on magnets and placed on a metal sheet.  Adjust positions until a clear spectrum is seen:
+Camera, diffraction grating, slit are mounted on magnets and placed on a metal sheet.  Positions adjusted until a clear spectrum is seen:
 
 ![Setup](/images/setup.JPG)
 	
-Covered with black paper to keep room light out.  The old enlarger head seemed like a good idea with its condensing lens and iris… but in the end, I took all that out, and controlled the light with layers of wax paper in the negative carrier.
+Covered with black paper to keep room light out.  The old enlarger head seemed like a good idea with its condensing lens and iris.  On the other hand, taking the lens and iris out, just using some layers of wax paper in the negative carrier, works pretty well too... 
 
-Camera connected to Raspberry Pi III, running Python/Pygame, Gnuplot, Bash
+Camera connected to Raspberry Pi (4)), running Python/Pygame, Gnuplot, Bash
 
 - Alignment is critical
-- Focus is critical.  The camera I’m using  can be manually focused, but it’s not easy.
+- Focus is critical.  The camera I’m using  can be manually focused, but it’s not easy.  I hot-glued a tooth-pick to the side of the lens to make it easier to adjust.
 - Exposure is critical.  Too much light will blur the spectrum.
 
 
@@ -44,11 +44,11 @@ Using the peaks at Hg436 and Eu611 gives this for the scale:
 
 ### CIS Calibration
 
-But what about “featureless” spectra:
+But what about "smooth"" spectra:
 
 ![Broad](/images/air-spectrum-20181215-164105-Overlay.png)
  
-It’s doesn't have any prominate peaks, but it does have three prominent bumps which correspond to the peak RGB sensitivities in the Color Imaging Sensor (CIS):
+It’s doesn't have any prominate peaks, but it does have three noticeable bumps at the RGB peak sensitivities of the Color Imaging Sensor (CIS):
 
 - Red: 580 nm
 - Green: 515 nm
@@ -62,9 +62,10 @@ Using those values for the scale gives a good match to the CFL calibration:
 
 ### Auto Calibration?
 
-Seems like you should be able to take the RGB values of a pixel, convert it to HSV, then map the Hue (H) to Wavelength (nm).  Almost works, but not quite…
+-- Seems like you should be able to take the RGB values of a pixel, convert it to HSV, then map the Hue (H) to Wavelength (nm).  Almost works, but not quite… 
 
 
+## Different Light Sources
 ## Plotting
 ### Overlay
 ### Intensity
