@@ -97,7 +97,18 @@ while active:
 		if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
 #			cam.stop()
 			active = False
-		
+
+		if (e.type == KEYUP and e.key == K_UP):
+			camBrightness = int(getV4L2("brightness"))
+			camBrightness += 1
+			setV4L2("brightness",camBrightness )
+			print(f"Brightness: {camBrightness}")
+		if (e.type == KEYUP and e.key == K_DOWN):
+			camBrightness = int(getV4L2("brightness"))
+			camBrightness -= 1
+			setV4L2("brightness",camBrightness )
+			print(f"Brightness: {camBrightness}")
+
 		if (e.type == KEYUP and e.key == K_SPACE):
 			showAverage = not showAverage
 		if (e.type == KEYUP and e.key == K_a):
