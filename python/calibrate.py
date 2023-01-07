@@ -61,10 +61,11 @@ parser = argparse.ArgumentParser(description='Calibrate')
 parser.add_argument('CSVfile')
 
 args = parser.parse_args()
-CSVfile = str(pathlib.Path(args.CSVfile).with_suffix('.csv'))
-CALfile = str(pathlib.Path(args.CSVfile).with_suffix('.cal'))
-JPGfile = str(pathlib.Path(args.CSVfile).with_suffix('.jpg'))
-BASEfile = os.path.basename(args.CSVfile)
+# 'with_suffix' will replace a trailing dot-suffix, but will append to a trailing dot:
+CSVfile = str(pathlib.Path(args.CSVfile.rstrip('.')).with_suffix('.csv'))
+CALfile = str(pathlib.Path(args.CSVfile.rstrip('.')).with_suffix('.cal'))
+JPGfile = str(pathlib.Path(args.CSVfile.rstrip('.')).with_suffix('.jpg'))
+BASEfile = os.path.basename(args.CSVfile.rstrip('.'))
 
 # read data file
 DATAfile = CSVfile
@@ -94,7 +95,6 @@ CALindex = 0         # normally CFL options, toggle to use CIS options
 
 # initialize display environment
 pygame.display.init()
-pygame.display.set_caption('Calibrate - '+BASEfile)
 
 pygame.init()
 
