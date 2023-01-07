@@ -24,26 +24,28 @@ set term qt size width,height
 
 set datafile separator ","
 
-set label "$SDESC" at graph 0,character 3  tc "white" front
-set label "nm" at graph 0.98,character 1 tc "white" front
-
-set y2range [0:height-1]
-set yrange [-12:255]
-unset ytics
-
 m = (611.0 - 436.0) / ($C611 - $C436)   # calibration multiplier
 b = 611.0 - m * $C611                   # calibration offset
+
+nmCol(nm) = (nm-b)/m
+colNM(col) = col*m+b
 
 set style line 1 lw 1 lc rgb "white"
 set style arrow 1 nohead front lc rgb "white" dashtype 2
 
-set x2range [0:width-1]
+set y2range [0:height-1]
+set yrange [-12:255]
+set x2range [nmCol(375):nmCol(695)]
+set xrange [375:695]
+
+unset ytics
 set grid xtics lc rgb "white" front # use set grid to get xtic marks white and in front
 unset grid                          # ...unset grid to turn off the grid lines
 set xtics axis in 50 tc "white"     # put the tics on the zero axis and tic text white
 set border ls 1                     # tic lines use the border color
 set xtics nomirror
 set mxtics  5
+
 #set xzeroaxis ls 1                 # draw zero line (or not. Changes label position)
 unset key
 
@@ -53,6 +55,11 @@ set lmargin screen 0
 set bmargin screen 0
 set rmargin screen 1
 set tmargin screen 1
+
+set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'black' 
+
+set label "$SDESC" at graph 0,character 3  tc "white" front
+set label "nm" at graph 0.98,character 1 tc "white" front
 
 set arrow from 405,graph 0 to 405,720 as 1
 set label "Hg405" at 405,character 3 tc "white" front
@@ -67,7 +74,7 @@ set arrow from 611,graph 0 to 611,720 as 1
 set label "Eu611" at 611,character 3 tc "white" front
 
 plot "$JPG" binary filetype=jpg with rgbimage axes x2y2, \
-     "$CSV" using (\$1*m+b):2 skip 1 ls 1 title "$SNAME" with lines axes x1y1
+     "$CSV" using (colNM(\$1)):2 skip 1 ls 1 title "$SNAME" with lines axes x1y1
 
 pause mouse button2 "button2 to exit"
 

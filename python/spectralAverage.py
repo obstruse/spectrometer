@@ -23,18 +23,20 @@ config.read('config.ini')
 width = config.getint('Spectrometer','width',fallback=1280)
 height = config.getint('Spectrometer','height',fallback=720)
 videoDev = config.get('Spectrometer','videoDev',fallback='/dev/video0')
-averageItems = config.getint('Spectrometer','averageItems',fallback=50)
+averageItems = config.getint('Spectrometer','averageItems',fallback=20)
 
 # read command line, to override the config file settings
 parser = argparse.ArgumentParser(description='Spectrometer')
 parser.add_argument('-x','--width'     ,dest='width',default=width,type=int)
 parser.add_argument('-y','--height'    ,dest='height',default=height,type=int)
 parser.add_argument('-v','--video'     ,dest='videoDev',default=videoDev)
+parser.add_argument('-a','--average'   ,dest='averageItems',default=averageItems,type=int)
 
 args = parser.parse_args()
 width = args.width
 height = args.height
 videoDev = args.videoDev
+averageItems = args.averageItems
 
 pygame.init()
 pygame.camera.init()
@@ -164,7 +166,7 @@ while active:
 			# average the columns
 			for xCol in range(width):
 				for zColor in range(3):
-					if averageArray[xCol,averageIndex,zColor] > 250:
+					if averageArray[xCol,averageIndex,zColor] > 250:	# error, color clipped
 						errSurface.set_at((xCol,0),(255,0,0))
 
 					iTotal = 0
@@ -181,7 +183,8 @@ while active:
 			# fill lcd with lineSurface
 			# fill it in chunks, so that you can see that something is happening...
 			# ... also maybe averageItems == 50 is too much? (takes too long...)
-			for i in range (int(height*10/averageItems)):
+			#for i in range (int(height*10/averageItems)):
+			for i in range (int(height/8)):
 				yDisplayRow += 1
 				yDisplayRow = yDisplayRow % height
 				outSurface.blit(lineSurface, (0,yDisplayRow))
@@ -189,7 +192,7 @@ while active:
 			lcd.blit(outSurface,(0,0))
 
 			for i in range(10):
-				lcd.blit(errSurface,(0,i))	# errs at top
+				lcd.blit(errSurface,(0,i))	# display error bar at top of window
 			
 		else:
 			lcd.blit(image, (0,0))
