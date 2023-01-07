@@ -83,9 +83,11 @@ nm611 = 611
 resolution = (len(data)-1,256)
 
 # Calibration options
-CFL = { 'type':'CFL', 'nmLeft':436, 'nmRight':611, 'mask':0b0001, 'nmLandmarks':(405, 487, 542,546)}
-CIS = { 'type':'CIS', 'nmLeft':474, 'nmRight':595, 'mask':0b1110, 'nmLandmarks':(536,)}
-CALS = ( CFL, CIS )
+CFL = { 'type':'CFL', 'nmLeft':436, 'nmRight':611, 'mask':0b10001, 'nmLandmarks':(405, 487, 542,546)}
+CIS = { 'type':'CIS', 'nmLeft':474, 'nmRight':595, 'mask':0b11110, 'nmLandmarks':(536,)}
+RGB = { 'type':'RGB', 'nmLeft':436, 'nmRight':611, 'mask':0b01110, 'nmLandmarks':()}
+INT = { 'type':'INT', 'nmLeft':436, 'nmRight':611, 'mask':0b00001, 'nmLandmarks':()}
+CALS = ( CFL, CIS, RGB, INT )
 CALindex = 0         # normally CFL options, toggle to use CIS options
 
 (x,y) = (0,0)
@@ -128,11 +130,14 @@ rectLeft  = pygame.Rect((0,0),               (resolution[0]/2,resolution[1]))
 # create graph
 def createGraph():
     mask = CALS[CALindex]['mask']
+    type = CALS[CALindex]['type']
+    pygame.display.set_caption(type+' Calibrate - '+BASEfile)
+
     
     graphSurface.fill(BLACK)
     graphSurface.set_colorkey(BLACK)
 
-    if mask & 0b0001:
+    if mask & 0b00001:
         lastPos = (0,0)
         for P in data[1::]:
             currentPos = (int(P[0]),resolution[1]-float(P[1]))
@@ -141,7 +146,7 @@ def createGraph():
 
             lastPos = currentPos
 
-    if mask & 0b0010:
+    if mask & 0b00010:
         lastPos = (0,0)
         for P in range(resolution[0]):
             currentPos = (P, resolution[1] - backgroundSurface.get_at((P,10))[0])
@@ -150,7 +155,7 @@ def createGraph():
 
             lastPos = currentPos
 
-    if mask & 0b0100:
+    if mask & 0b00100:
         lastPos = (0,0)
         for P in range(resolution[0]):
             currentPos = (P, resolution[1] - backgroundSurface.get_at((P,10))[1])
@@ -200,9 +205,16 @@ def calibrate():
     nmLandmarks = CALS[CALindex]['nmLandmarks']
 
     # calibration points
-    dashedVLine(calibrateSurface,nmCol(nmLeft) ,resolution[1],WHITE,12,3)
-    dashedVLine(calibrateSurface,nmCol(nmRight),resolution[1],WHITE,12,3)
-        
+    if CALS[CALindex]['mask'] & 0b10000 :
+        dashedVLine(calibrateSurface,nmCol(nmLeft) ,resolution[1],WHITE,12,3)
+        dashedVLine(calibrateSurface,nmCol(nmRight),resolution[1],WHITE,12,3)
+        # camera limits
+        nmLimits = [400,700]
+        for L in nmLimits:
+            P = nmCol(L)
+            pygame.draw.line(calibrateSurface,RED,(P,7*resolution[1]/8),(P,resolution[1]),3)
+
+            
     # landmarks
     for L in nmLandmarks:
         dashedVLine(calibrateSurface,nmCol(L),resolution[1],WHITE,4,1)
@@ -210,12 +222,6 @@ def calibrate():
     ## LED landmarks
     ## https://gpnmag.com/article/white-leds-for-plant-applications/
     #landmarks = [432,556,637]
-
-    # camera limits
-    nmLimits = [400,700]
-    for L in nmLimits:
-        P = nmCol(L)
-        pygame.draw.line(calibrateSurface,RED,(P,7*resolution[1]/8),(P,resolution[1]),3)
 
 
 createGraph()
@@ -242,14 +248,12 @@ while active:
             if rectLeft.collidepoint((x,y)):
                 nmLeft = CALS[CALindex]['nmLeft']
                 m = (col611 - x) / (nm611 - nmLeft) 
-                #b = nm611 * m - col611
                 b = nmLeft * m - x
                 col436 = nmCol(nm436)
             
             if rectRight.collidepoint((x,y)):
                 nmRight = CALS[CALindex]['nmRight'] 
                 m = (x - col436) / (nmRight - nm436) 
-                #b = nm436 * m - col436
                 b = nmRight * m - x
                 col611 = nmCol(nm611)
             
