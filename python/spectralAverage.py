@@ -52,6 +52,14 @@ intArray = [[0]*3]*width
 averageArraySurface = pygame.surface.Surface((width,averageItems))
 averageArray = pygame.surfarray.array3d(averageArraySurface)
 
+outSurface = pygame.surface.Surface(resolution)
+outSurface.fill((0,0,0))
+outSurface.set_colorkey((0,0,0))
+
+errSurface = pygame.surface.Surface((width,1))
+errSurface.fill((0,0,0))
+errSurface.set_colorkey((0,0,0))
+
 showAverage = False
 noAverage = False
 yDisplayRow = -1
@@ -100,12 +108,12 @@ while active:
 
 		if (e.type == KEYUP and e.key == K_UP):
 			camBrightness = int(getV4L2("brightness"))
-			camBrightness += 1
+			camBrightness += 2
 			setV4L2("brightness",camBrightness )
 			print(f"Brightness: {camBrightness}")
 		if (e.type == KEYUP and e.key == K_DOWN):
 			camBrightness = int(getV4L2("brightness"))
-			camBrightness -= 1
+			camBrightness -= 2
 			setV4L2("brightness",camBrightness )
 			print(f"Brightness: {camBrightness}")
 
@@ -122,7 +130,7 @@ while active:
 
 			# write time averaged image (integer average, 8-bits/color)
 			fileName = "./%s-spectrum-%s.jpg" % (name,timestr)
-			pygame.image.save(lcd, fileName)
+			pygame.image.save(outSurface, fileName)
 
 			# write time averaged CSV, floating-point averaged colors
 			fileName = "./%s-spectrum-%s.csv" % (name,timestr)
@@ -151,14 +159,19 @@ while active:
 		averageArray[0:width,averageIndex] = pygame.surfarray.array3d(image)[0:width,y]
 
 		if showAverage :
+			errSurface.fill((0,0,0))	# pixel errors
+
 			# average the columns
 			for xCol in range(width):
 				for zColor in range(3):
+					if averageArray[xCol,averageIndex,zColor] > 250:
+						errSurface.set_at((xCol,0),(255,0,0))
+
 					iTotal = 0
 					for yRow in range(averageItems):
 						iTotal += int(averageArray[xCol,yRow,zColor])
 					lineSurfArray[xCol,0,zColor] = iTotal/averageItems
-						
+
 			# what does it look like without averaging?
 			if noAverage:
 				lineSurfArray[0:width,0] = averageArray[0:width,averageIndex]
@@ -166,9 +179,18 @@ while active:
 			# convert lineSurfArray to lineSurface
 			lineSurface = pygame.surfarray.make_surface(lineSurfArray)
 			# fill lcd with lineSurface
-			for i in range (height):
-				lcd.blit(lineSurface, (0,i))
+			# fill it in chunks, so that you can see that something is happening...
+			# ... also maybe averageItems == 50 is too much? (takes too long...)
+			for i in range (int(height*10/averageItems)):
+				yDisplayRow += 1
+				yDisplayRow = yDisplayRow % height
+				outSurface.blit(lineSurface, (0,yDisplayRow))
+			
+			lcd.blit(outSurface,(0,0))
 
+			for i in range(10):
+				lcd.blit(errSurface,(0,i))	# errs at top
+			
 		else:
 			lcd.blit(image, (0,0))
 			pygame.draw.line(lcd, (255,0,0), (0,y), (width,y), 1)
