@@ -35,7 +35,7 @@ colNM(col) = col*m+b
 
 set style line 1 lw 1 lc rgb "white"
 set style arrow 1 nohead front lc rgb "white" dashtype 2
-set style textbox 2 transparent border lc "white"
+set style textbox transparent border lc "white"
 
 set y2range [0:height-1]
 set yrange [-30:255]
@@ -62,7 +62,7 @@ set tmargin screen 1
 
 set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'black' 
 
-set label "$SDESC" at graph .99, graph .94 right tc "white" front boxed bs 2
+set label "$SDESC" at graph .99, graph .94 right tc "white" front boxed
 set label "nm" at graph 0.98,character 1 tc "white" front
 
 set arrow from 405,graph 0 to 405,720 as 1
