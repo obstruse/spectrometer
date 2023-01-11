@@ -42,7 +42,8 @@ averageItems = args.averageItems
 pygame.init()
 pygame.camera.init()
 
-font = pygame.font.Font(None, 24)
+fontSize = 24
+font = pygame.font.Font(None, fontSize)
 
 WHITE = (255,255,255)
 BLACK = (0,0,0)
@@ -92,9 +93,17 @@ lcd = pygame.display.set_mode(resolution)
 cam = pygame.camera.Camera(videoDev,resolution)
 cam.start()
 
-DESC = { "name": "description", "pos":(width-10,10), "text":"description", "color":WHITE, "border":True }
-TAG = { "name": "tag", "pos":(width-10,42), "text":"prefix", "color":WHITE, "border":True }
-TXT = ( DESC, TAG)
+DESC =   { "name": "description", "pos":(width/2+30,height-fontSize-10),  "text":"description", "align":"TL"}
+TAG =    { "name": "tag",         "pos":(width/2-30,height-fontSize-10),  "text":"prefix",      "align":"TR" }
+BRIGHT = { "name":"brightness",   "pos":(10,height-fontSize-10), "text":"",           "align":"TL", "border":False }
+QUIT   = { "name":"quit",         "pos":(width-10,height-fontSize-10), "text":"QUIT", "align":"TR"}
+SAVE   = { "name":"save",         "pos":(width/2,height-fontSize-10), "text":"SAVE",  "align":"MT"}
+AVERAGE= { "name":"average",      "pos":(width/4,height-fontSize-10), "text":"AVERAGE", "align":"MT"}
+# display brightness
+#text = font.render(f"Brightness: {camBrightness}", True, WHITE)
+#lcd.blit(text,(10,height-fontSize-10))
+
+TXT = ( DESC, TAG, BRIGHT, QUIT, SAVE, AVERAGE)
 
 txtActive = -1
 
@@ -110,39 +119,48 @@ def getV4L2( ctrl ) :
         return ""
 
 def TXTdisplay(i) :
-    tempSurface = font.render(TXT[i]['text'],True,TXT[i]['color'])
+	tempSurface = font.render(TXT[i].get('text',""),True,TXT[i].get('color',WHITE))
 
-    txtRect = tempSurface.get_rect()
-    boxRect = txtRect.inflate(10,4)
-    boxRect.topright = TXT[i]['pos']
-    txtRect.center = boxRect.center
+	txtRect = tempSurface.get_rect()
+	boxRect = txtRect.inflate(10,4)
+	align = TXT[i].get('align','TR')
+	if align == 'TR' :
+		boxRect.topright = TXT[i]['pos']
+	if align == 'TL':
+		boxRect.topleft = TXT[i]['pos']
+	if align == 'MT' :
+		boxRect.midtop = TXT[i]['pos']
 
-    TXT[i]['rect'] = boxRect
+	print(f"name: {TXT[i]['name']}, width: {boxRect.size}")
+	txtRect.center = boxRect.center
 
-    txtSurface.blit(tempSurface,txtRect)
-    if TXT[i]['border'] :
-        pygame.draw.rect(txtSurface,TXT[i]['color'],boxRect,2)
+	TXT[i]['rect'] = boxRect
+
+	pygame.draw.rect(txtSurface,(1,1,1),boxRect,0)	# text background almost black. can't use black: it's transparent
+	txtSurface.blit(tempSurface,txtRect)
+	if TXT[i].get('border',True) :
+		pygame.draw.rect(txtSurface,TXT[i].get('color',WHITE),boxRect,2)
 
 
 
 camBrightness = int(getV4L2("brightness"))
-print(f"Brightness: {camBrightness}")
-image = cam.get_image()
+BRIGHT['text'] = f"Brightness: {camBrightness}"
 
 for i in range(len(TXT)):
     TXTdisplay(i)
+
+image = cam.get_image()
 
 active = True
 while active:
 	events = pygame.event.get()
 	for e in events:
 		if (e.type == MOUSEBUTTONDOWN):
-			for i in range(len(TXT)):
-				if TXT[i]['rect'].collidepoint(e.pos):
-					txtActive = i
-
-			# if it didn't collide with a txt box, then it's the averaging line position
-			if txtActive < 0:
+			if showAverage :	# if showing average, mouse click selects text box
+				for i in range(len(TXT)):
+					if TXT[i]['rect'].collidepoint(e.pos):
+						txtActive = i
+			else:				# ... otherwise mouse click is the averaging line
 				(x,y) = pygame.mouse.get_pos()
 
 		if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
@@ -153,10 +171,12 @@ while active:
 			camBrightness = int(getV4L2("brightness"))
 			camBrightness += 2
 			setV4L2("brightness",camBrightness )
+			BRIGHT['text'] = f"Brightness: {camBrightness}"
 		if (e.type == KEYUP and e.key == K_DOWN):
 			camBrightness = int(getV4L2("brightness"))
 			camBrightness -= 2
 			setV4L2("brightness",camBrightness )
+			BRIGHT['text'] = f"Brightness: {camBrightness}"
 
 		if (e.type == KEYUP):
 			if txtActive >= 0:
@@ -182,7 +202,7 @@ while active:
 				if (e.key == K_KP_ENTER or e.key == K_RETURN):
 					timestr = time.strftime("%Y%m%d-%H%M%S")
 
-					name = input("Name: ")
+					name = TAG['text']
 					desc = DESC['text']
 
 					# write time averaged image (integer average, 8-bits/color)
@@ -253,17 +273,18 @@ while active:
 			for i in range(10):
 				lcd.blit(oorSurface,(0,i))	# display error bar at top of window
 
-			# display brightness
-			text = font.render(f"Brightness: {camBrightness}", True, WHITE)
-			lcd.blit(text,(10,10))
-
-			# display text
-			lcd.blit(txtSurface,(0,0))
 
 			
 		else:
-			lcd.blit(image, (0,0))
+			lcd.blit(image, (0,0))		# averaging line
 			pygame.draw.line(lcd, (255,0,0), (0,y), (width,y), 1)
+
+		# display brightness
+		#text = font.render(f"Brightness: {camBrightness}", True, WHITE)
+		#lcd.blit(text,(10,height-fontSize-10))
+
+		# display text
+		lcd.blit(txtSurface,(0,0))
 
 		pygame.display.flip()
 
