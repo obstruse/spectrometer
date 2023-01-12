@@ -47,6 +47,10 @@ font = pygame.font.Font(None, fontSize)
 
 WHITE = (255,255,255)
 BLACK = (0,0,0)
+RED   = (255,0,0)
+BLUE  = (0,0,255)
+GREEN = (0,255,0)
+CYAN  = (0,255,255)
 
 resolution = (width,height)
 (x,y) = (0,0)
@@ -93,19 +97,21 @@ lcd = pygame.display.set_mode(resolution)
 cam = pygame.camera.Camera(videoDev,resolution)
 cam.start()
 
-DESC =   { "name": "description", "pos":(width/2+30,height-fontSize-10),  "text":"description", "align":"TL"}
-TAG =    { "name": "tag",         "pos":(width/2-30,height-fontSize-10),  "text":"prefix",      "align":"TR" }
-BRIGHT = { "name":"brightness",   "pos":(10,height-fontSize-10), "text":"",           "align":"TL", "border":False }
-QUIT   = { "name":"quit",         "pos":(width-10,height-fontSize-10), "text":"QUIT", "align":"TR"}
-SAVE   = { "name":"save",         "pos":(width/2,height-fontSize-10), "text":"SAVE",  "align":"MT"}
-AVERAGE= { "name":"average",      "pos":(width/4,height-fontSize-10), "text":"AVERAGE", "align":"MT"}
+D = { "DESC":{"name":"description", "pos":(width/2+30,height-fontSize-10), "text":"description", "align":"TL"},
+      "TAG":{"name":"tag",          "pos":(width/2-30,height-fontSize-10), "text":"prefix",      "align":"TR" },
+	  "BRIGHT":{"name":"brightness","pos":(10,height-fontSize-10),         "text":"",           "align":"TL", "border":False, "bg":BLACK },
+	  "QUIT":{"name":"quit",        "pos":(width-10,height-fontSize-10),   "text":"QUIT", "align":"TR", "bg":RED},
+      "SAVE":{"name":"save",        "pos":(width/2,height-fontSize-10),    "text":"SAVE",  "align":"MT", "bg":GREEN, "color":(1,1,1) },
+      "AVERAGE":{"name":"average",  "pos":(width/4,height-fontSize-10),    "text":"AVERAGE", "align":"MT", "bg":BLUE}
+}
+
 # display brightness
 #text = font.render(f"Brightness: {camBrightness}", True, WHITE)
 #lcd.blit(text,(10,height-fontSize-10))
 
-TXT = ( DESC, TAG, BRIGHT, QUIT, SAVE, AVERAGE)
+##TXT = ( DESC, TAG, BRIGHT, QUIT, SAVE, AVERAGE)
 
-txtActive = -1
+txtActive = ""
 
 #utility functions
 def setV4L2( ctrl, value ) :
@@ -118,36 +124,39 @@ def getV4L2( ctrl ) :
     else :
         return ""
 
-def TXTdisplay(i) :
-	tempSurface = font.render(TXT[i].get('text',""),True,TXT[i].get('color',WHITE))
+def TXTdisplay(key) :
+	tempSurface = font.render(D[key].get('text',""),True,D[key].get('color',WHITE))
+
+	# if the line is shorter, need to clear
+	pygame.draw.rect(txtSurface, BLACK, D[key].get('rect',(0,0,0,0)),0)
 
 	txtRect = tempSurface.get_rect()
 	boxRect = txtRect.inflate(10,4)
-	align = TXT[i].get('align','TR')
+	align = D[key].get('align','TR')
 	if align == 'TR' :
-		boxRect.topright = TXT[i]['pos']
+		boxRect.topright = D[key]['pos']
 	if align == 'TL':
-		boxRect.topleft = TXT[i]['pos']
+		boxRect.topleft = D[key]['pos']
 	if align == 'MT' :
-		boxRect.midtop = TXT[i]['pos']
+		boxRect.midtop = D[key]['pos']
 
-	print(f"name: {TXT[i]['name']}, width: {boxRect.size}")
+	print(f"name: {D[key]['name']}, width: {boxRect.size}")
 	txtRect.center = boxRect.center
 
-	TXT[i]['rect'] = boxRect
+	D[key]['rect'] = boxRect
 
-	pygame.draw.rect(txtSurface,(1,1,1),boxRect,0)	# text background almost black. can't use black: it's transparent
+	pygame.draw.rect(txtSurface,D[key].get('bg',(1,1,1)),boxRect,0)	# text background default to almost black. can't use black: it's transparent
 	txtSurface.blit(tempSurface,txtRect)
-	if TXT[i].get('border',True) :
-		pygame.draw.rect(txtSurface,TXT[i].get('color',WHITE),boxRect,2)
+	if D[key].get('border',True) :
+		pygame.draw.rect(txtSurface,WHITE,boxRect,2)
 
 
 
 camBrightness = int(getV4L2("brightness"))
-BRIGHT['text'] = f"Brightness: {camBrightness}"
+D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
 
-for i in range(len(TXT)):
-    TXTdisplay(i)
+for key in list(D):
+    TXTdisplay(key)
 
 image = cam.get_image()
 
@@ -155,41 +164,51 @@ active = True
 while active:
 	events = pygame.event.get()
 	for e in events:
-		if (e.type == MOUSEBUTTONDOWN):
-			if showAverage :	# if showing average, mouse click selects text box
-				for i in range(len(TXT)):
-					if TXT[i]['rect'].collidepoint(e.pos):
-						txtActive = i
-			else:				# ... otherwise mouse click is the averaging line
-				(x,y) = pygame.mouse.get_pos()
-
 		if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
-#			cam.stop()
 			active = False
+
+		if (e.type == MOUSEBUTTONDOWN):
+			txtActive = ""			# a click anywhere ends any active txt inputs
+			for key in list(D):
+    			# collide with dictionary
+				print(f"key: {key}")
+				if D[key]['rect'].collidepoint(e.pos):
+					print("...collided")
+					D[key]['value'] = 1
+					txtActive = key
+					break
+				print("...didn't collide")
+
+				# so, didn't collide with anything
+				if showAverage :	# if showing average, mouse click selects text box
+					continue
+				else:				# ... otherwise mouse click is the averaging line
+					print("about to change x,y")
+					(x,y) = pygame.mouse.get_pos()
 
 		if (e.type == KEYUP and e.key == K_UP):
 			camBrightness = int(getV4L2("brightness"))
 			camBrightness += 2
 			setV4L2("brightness",camBrightness )
-			BRIGHT['text'] = f"Brightness: {camBrightness}"
+			D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
+			TXTdisplay('BRIGHT')
 		if (e.type == KEYUP and e.key == K_DOWN):
 			camBrightness = int(getV4L2("brightness"))
 			camBrightness -= 2
 			setV4L2("brightness",camBrightness )
-			BRIGHT['text'] = f"Brightness: {camBrightness}"
+			D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
+			TXTdisplay('BRIGHT')
 
 		if (e.type == KEYUP):
-			if txtActive >= 0:
+			if txtActive != "":
 				# text input
 				if e.key == pygame.K_RETURN:
-					txtActive = -1
+					txtActive = ""
 				else:
 					if e.key == pygame.K_BACKSPACE:
-						# line is shorter, so need to clear
-						pygame.draw.rect(txtSurface, BLACK, TXT[txtActive]['rect'],0)
-						TXT[txtActive]['text'] = TXT[txtActive]['text'][:-1]
+						D[txtActive]['text'] = D[txtActive]['text'][:-1]
 					else:
-						TXT[txtActive]['text'] += e.unicode
+						D[txtActive]['text'] += e.unicode
 
 					TXTdisplay(txtActive)
 
@@ -199,18 +218,19 @@ while active:
 				if (e.key == K_a):
 					noAverage = not noAverage
 
-				if (e.key == K_KP_ENTER or e.key == K_RETURN):
+				#if (e.key == K_KP_ENTER or e.key == K_RETURN):
+				if (e.key == K_1):
 					timestr = time.strftime("%Y%m%d-%H%M%S")
 
-					name = TAG['text']
-					desc = DESC['text']
+					name = D['TAG'].get('text','UNK')
+					desc = D['DESC'].get('text','unknown')
 
 					# write time averaged image (integer average, 8-bits/color)
-					fileName = "./%s-spectrum-%s.jpg" % (name,timestr)
+					fileName = "./%s-%s.jpg" % (name,timestr)
 					pygame.image.save(outSurface, fileName)
 
 					# write time averaged CSV, floating-point averaged colors
-					fileName = "./%s-spectrum-%s.csv" % (name,timestr)
+					fileName = "./%s-%s.csv" % (name,timestr)
 					f = open(fileName, "x")
 					f.write( "%s,%s,%s\n" % (calibration.strip(),name,desc) )
 
@@ -287,5 +307,9 @@ while active:
 		lcd.blit(txtSurface,(0,0))
 
 		pygame.display.flip()
+	
+	# after every event, check actions
+	if D['QUIT'].get('value',0) == 1:
+		active = False
 
 cam.stop()
