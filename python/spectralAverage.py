@@ -25,6 +25,8 @@ width = config.getint('Spectrometer','width',fallback=1280)
 height = config.getint('Spectrometer','height',fallback=720)
 videoDev = config.get('Spectrometer','videoDev',fallback='/dev/video0')
 averageItems = config.getint('Spectrometer','averageItems',fallback=20)
+pixelClip = config.getint('Spectrometer','pixelClip',fallback=250)
+calibDefault = config.get('Spectrometer','calibDefault',fallback=',,410,900')
 
 # read command line, to override the config file settings
 parser = argparse.ArgumentParser(description='Spectrometer')
@@ -32,12 +34,14 @@ parser.add_argument('-x','--width'     ,dest='width',default=width,type=int)
 parser.add_argument('-y','--height'    ,dest='height',default=height,type=int)
 parser.add_argument('-v','--video'     ,dest='videoDev',default=videoDev)
 parser.add_argument('-a','--average'   ,dest='averageItems',default=averageItems,type=int)
+parser.add_argument('-c','--clip'      ,dest='pixelClip',default=pixelClip,type=int)
 
 args = parser.parse_args()
 width = args.width
 height = args.height
 videoDev = args.videoDev
 averageItems = args.averageItems
+pixelClip = args.pixelClip
 
 pygame.init()
 pygame.camera.init()
@@ -90,7 +94,7 @@ try:
 	calibration = calib.read()
 	calib.close()
 except:
-	calibration = ",,436,611"
+	calibration = calibDefault
 
 lcd = pygame.display.set_mode(resolution)
 
@@ -105,13 +109,7 @@ D = { "DESC":{"name":"description", "pos":(width/2+30,height-fontSize-10), "text
       "AVERAGE":{"name":"average",  "pos":(width/4,height-fontSize-10),    "text":"AVERAGE", "align":"MT", "bg":BLUE}
 }
 
-# display brightness
-#text = font.render(f"Brightness: {camBrightness}", True, WHITE)
-#lcd.blit(text,(10,height-fontSize-10))
-
-##TXT = ( DESC, TAG, BRIGHT, QUIT, SAVE, AVERAGE)
-
-txtActive = ""
+txtActive = ""		# a text object is active and wants attention. the value is the dictionary key to the object.
 
 #utility functions
 def setV4L2( ctrl, value ) :
@@ -127,7 +125,7 @@ def getV4L2( ctrl ) :
 def TXTdisplay(key) :
 	tempSurface = font.render(D[key].get('text',""),True,D[key].get('color',WHITE))
 
-	# if the line is shorter, need to clear
+	# if the line is shorter, need to clear previous box
 	pygame.draw.rect(txtSurface, BLACK, D[key].get('rect',(0,0,0,0)),0)
 
 	txtRect = tempSurface.get_rect()
@@ -140,7 +138,7 @@ def TXTdisplay(key) :
 	if align == 'MT' :
 		boxRect.midtop = D[key]['pos']
 
-	print(f"name: {D[key]['name']}, width: {boxRect.size}")
+	#print(f"name: {D[key]['name']}, size: {boxRect.size}")
 	txtRect.center = boxRect.center
 
 	D[key]['rect'] = boxRect
@@ -155,6 +153,7 @@ def TXTdisplay(key) :
 camBrightness = int(getV4L2("brightness"))
 D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
 
+# display all of the objects
 for key in list(D):
     TXTdisplay(key)
 
@@ -171,20 +170,17 @@ while active:
 			txtActive = ""			# a click anywhere ends any active txt inputs
 			for key in list(D):
     			# collide with dictionary
-				print(f"key: {key}")
 				if D[key]['rect'].collidepoint(e.pos):
-					print("...collided")
 					D[key]['value'] = 1
 					txtActive = key
 					break
-				print("...didn't collide")
-
+			
+			if txtActive == "" :
 				# so, didn't collide with anything
-				if showAverage :	# if showing average, mouse click selects text box
+				if showAverage :	# if showing average, mouse click is only for box collisions
 					continue
-				else:				# ... otherwise mouse click is the averaging line
-					print("about to change x,y")
-					(x,y) = pygame.mouse.get_pos()
+				else:				# ... otherwise mouse click is also selects the averaging line
+					(x,y) = e.pos
 
 		if (e.type == KEYUP and e.key == K_UP):
 			camBrightness = int(getV4L2("brightness"))
@@ -213,42 +209,10 @@ while active:
 					TXTdisplay(txtActive)
 
 			else:
-				if (e.key == K_SPACE):
-					showAverage = not showAverage
 				if (e.key == K_a):
 					noAverage = not noAverage
 
-				#if (e.key == K_KP_ENTER or e.key == K_RETURN):
-				if (e.key == K_1):
-					timestr = time.strftime("%Y%m%d-%H%M%S")
-
-					name = D['TAG'].get('text','UNK')
-					desc = D['DESC'].get('text','unknown')
-
-					# write time averaged image (integer average, 8-bits/color)
-					fileName = "./%s-%s.jpg" % (name,timestr)
-					pygame.image.save(outSurface, fileName)
-
-					# write time averaged CSV, floating-point averaged colors
-					fileName = "./%s-%s.csv" % (name,timestr)
-					f = open(fileName, "x")
-					f.write( "%s,%s,%s\n" % (calibration.strip(),name,desc) )
-
-					# each column
-					for xCol in range (width):
-						iTotal = 0
-						# average over time
-						for yRow in range(averageItems):
-							# average the colors
-							for zColor in range(3):
-								#iTotal += int(averageArray[xCol,yRow,zColor]) ** 2
-								iTotal += int(averageArray[xCol,yRow,zColor])
-
-						#f.write("%d,%f\n" % (xCol,math.sqrt(iTotal/(3.0*averageItems))) )
-						f.write("%d,%f\n" % (xCol,iTotal/(3.0*averageItems)) )
-					f.close()
-
-
+	# camera stuff
 	if cam.query_image():
 		image = cam.get_image()
 
@@ -258,22 +222,21 @@ while active:
 		averageArray[0:width,averageIndex] = pygame.surfarray.array3d(image)[0:width,y]
 
 		if showAverage :
-			oorSurface.fill(BLACK)	# out of range pixel errors
+    		# average line over time
+			oorSurface.fill(BLACK)	# initialize out of range pixel errors
 
 			# average the columns
 			for xCol in range(width):
 				for zColor in range(3):
-					if averageArray[xCol,averageIndex,zColor] > 250:	# error, color clipped
+					if averageArray[xCol,averageIndex,zColor] > pixelClip:	# value (almost) clipped
 						oorSurface.set_at((xCol,0),(255,0,0))
 
 					iTotal = 0
 					for yRow in range(averageItems):
-						#iTotal += int(averageArray[xCol,yRow,zColor]) ** 2
-						iTotal += int(averageArray[xCol,yRow,zColor])
-					#lineSurfArray[xCol,0,zColor] = math.sqrt(iTotal/averageItems)
-					lineSurfArray[xCol,0,zColor] = iTotal/averageItems
+						iTotal += averageArray[xCol,yRow,zColor]
+					lineSurfArray[xCol,0,zColor] = int(iTotal/averageItems)
 
-			# what does it look like without averaging?
+			## what does it look like without averaging?
 			if noAverage:
 				lineSurfArray[0:width,0] = averageArray[0:width,averageIndex]
 
@@ -281,35 +244,77 @@ while active:
 			lineSurface = pygame.surfarray.make_surface(lineSurfArray)
 			# fill lcd with lineSurface
 			# fill it in chunks, so that you can see that something is happening...
-			# ... also maybe averageItems == 50 is too much? (takes too long...)
 			for i in range (int(height/8)):
 				yDisplayRow += 1
 				yDisplayRow = yDisplayRow % height
 				outSurface.blit(lineSurface, (0,yDisplayRow))
 			
+			# the average surface...
 			lcd.blit(outSurface,(0,0))
 
-			# display out of range marks
+			# ...and Out Of Range marks
 			for i in range(10):
-				lcd.blit(oorSurface,(0,i))	# display error bar at top of window
-
-
+				lcd.blit(oorSurface,(0,i))	# display OOR at top of window
 			
 		else:
-			lcd.blit(image, (0,0))		# averaging line
+    		# camera image with averaging line
+			lcd.blit(image, (0,0))
 			pygame.draw.line(lcd, (255,0,0), (0,y), (width,y), 1)
 
-		# display brightness
-		#text = font.render(f"Brightness: {camBrightness}", True, WHITE)
-		#lcd.blit(text,(10,height-fontSize-10))
-
-		# display text
+		# display text layer over everything
 		lcd.blit(txtSurface,(0,0))
 
 		pygame.display.flip()
-	
-	# after every event, check actions
-	if D['QUIT'].get('value',0) == 1:
+
+
+	# after every frame, check actions
+	if D['QUIT'].get('value',0) > 0:
 		active = False
+
+	if D['AVERAGE'].get('value',0) > 0:
+		showAverage = not showAverage
+		D['AVERAGE']['value'] = 0
+		txtActive = ""
+    
+	if D['SAVE'].get('value',0) > 0:
+		D['SAVE']['value'] = 0
+		txtActive = ""
+
+		timestr = time.strftime("%Y%m%d-%H%M%S")
+
+		name = D['TAG'].get('text','UNK')
+		desc = D['DESC'].get('text','unknown')
+
+		# write time averaged image (integer average, 8-bits/color)
+		fileName = "./%s-%s.jpg" % (name,timestr)
+		pygame.image.save(outSurface, fileName)
+		# a little bit of feedback for the operation
+		pygame.display.set_caption(fileName)
+
+		# write time averaged CSV, floating-point averaged colors
+		fileName = "./%s-%s.csv" % (name,timestr)
+		f = open(fileName, "x")
+		f.write( "%s,%s,%s\n" % (calibration.strip(),name,desc) )
+
+		# each column
+		for xCol in range (width):
+			z0 = 0
+			z1 = 0
+			z2 = 0
+			# average over time
+			for yRow in range(averageItems):
+				# average the colors
+				z0 += averageArray[xCol,yRow,0]
+				z1 += averageArray[xCol,yRow,1]
+				z2 += averageArray[xCol,yRow,2]
+				#for zColor in range(3):
+				#	iTotal += averageArray[xCol,yRow,zColor]
+			
+			iTotal = (z0 + z1 + z2)/3.0/averageItems
+			z0 = z0/averageItems
+			z1 = z1/averageItems
+			z2 = z2/averageItems
+			f.write("%d,%f,%f,%f,%f\n" % (xCol,iTotal,z0,z1,z2) )
+		f.close()
 
 cam.stop()
