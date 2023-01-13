@@ -11,6 +11,7 @@ from PIL import Image
 import math
 import time
 import shlex, subprocess
+import numpy
 
 from configparser import ConfigParser
 import argparse
@@ -101,13 +102,15 @@ lcd = pygame.display.set_mode(resolution)
 cam = pygame.camera.Camera(videoDev,resolution)
 cam.start()
 
+# buttons
 bottomRow = height-10
-D = { "DESC":{"name":"description", "pos":(width/2+30,bottomRow), "text":"description", "align":"BL"},
-      "TAG":{"name":"tag",          "pos":(width/2-30,bottomRow), "text":"prefix",      "align":"BR" },
-	  "BRIGHT":{"name":"brightness","pos":(10,bottomRow),         "text":"",           "align":"BL", "border":False, "bg":BLACK },
-	  "QUIT":{"name":"quit",        "pos":(width-10,bottomRow),   "text":"QUIT", "align":"BR", "bg":RED},
-      "SAVE":{"name":"save",        "pos":(width/2,bottomRow),    "text":"SAVE",  "align":"MB", "bg":GREEN, "color":(1,1,1) },
-      "AVERAGE":{"name":"average",  "pos":(width/4,bottomRow),    "text":"AVERAGE", "align":"MB", "bg":BLUE}
+D = { 
+      "SAVE":   {"pos":(width/2,bottomRow), "text":"SAVE", "align":"MB", "bg":GREEN, "color":(1,1,1) },
+	  "DESC":   {"rightof":"SAVE",          "text":"description"},
+      "TAG":    {"leftof":"SAVE",           "text":"prefix"},
+	  "BRIGHT": {"pos":(10,bottomRow),      "text":"", "align":"BL", "border":False, "bg":BLACK },
+	  "QUIT":   {"pos":(width-10,bottomRow),"text":"QUIT", "align":"BR", "bg":RED},
+      "AVERAGE":{"pos":(width/4,bottomRow), "text":"AVERAGE", "align":"MB", "bg":BLUE}
 }
 
 txtActive = ""		# a text object is active and wants attention. the value is the dictionary key to the object.
@@ -124,6 +127,20 @@ def getV4L2( ctrl ) :
         return ""
 
 def TXTdisplay(key) :
+	margin = D[key].get('margin',3)
+
+	# position to the right of a previous entry in the dictionary
+	rightof = D[key].get('rightof',"") 
+	if rightof != "" :
+		D[key]['pos'] = numpy.add(D[rightof]['rect'].bottomright,(margin,0)) 	# give it a little space
+		D[key]['align'] = 'BL'
+	
+	# position to the left of a previous entry in the dictionary
+	leftof = D[key].get('leftof',"") 
+	if leftof != "" :
+		D[key]['pos'] = numpy.subtract(D[leftof]['rect'].bottomleft,(margin,0))
+		D[key]['align'] = 'BR'
+
 	tempSurface = font.render(D[key].get('text',""),True,D[key].get('color',WHITE))
 
 	# if the line is shorter, need to clear previous box
@@ -139,7 +156,6 @@ def TXTdisplay(key) :
 	if align == 'MB' :
 		boxRect.midbottom = D[key]['pos']
 
-	#print(f"name: {D[key]['name']}, size: {boxRect.size}")
 	txtRect.center = boxRect.center
 
 	D[key]['rect'] = boxRect
@@ -149,6 +165,12 @@ def TXTdisplay(key) :
 	if D[key].get('border',True) :
 		pygame.draw.rect(txtSurface,WHITE,boxRect,2)
 
+def TXThighlight(key,highlight) :
+    if key in D :
+        if highlight :
+            pygame.draw.rect(txtSurface,RED,D[key]['rect'],2)
+        else:
+            pygame.draw.rect(txtSurface,WHITE,D[key]['rect'],2)
 
 
 camBrightness = int(getV4L2("brightness"))
@@ -168,12 +190,14 @@ while active:
 			active = False
 
 		if (e.type == MOUSEBUTTONDOWN):
+			TXThighlight(txtActive,False)	# trun off previous highlight if any
 			txtActive = ""			# a click anywhere ends any active txt inputs
 			for key in list(D):
     			# collide with dictionary
 				if D[key]['rect'].collidepoint(e.pos):
 					D[key]['value'] = 1
 					txtActive = key
+					TXThighlight(key,True)
 					break
 			
 			if txtActive == "" :
@@ -183,20 +207,20 @@ while active:
 				else:				# ... otherwise mouse click is also selects the averaging line
 					(x,y) = e.pos
 
-		if (e.type == KEYUP and e.key == K_UP):
+		if (e.type == KEYDOWN and e.key == K_UP):
 			camBrightness = int(getV4L2("brightness"))
 			camBrightness += 2
 			setV4L2("brightness",camBrightness )
 			D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
 			TXTdisplay('BRIGHT')
-		if (e.type == KEYUP and e.key == K_DOWN):
+		if (e.type == KEYDOWN and e.key == K_DOWN):
 			camBrightness = int(getV4L2("brightness"))
 			camBrightness -= 2
 			setV4L2("brightness",camBrightness )
 			D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
 			TXTdisplay('BRIGHT')
 
-		if (e.type == KEYUP):
+		if (e.type == KEYDOWN):
 			if txtActive != "":
 				# text input
 				if e.key == pygame.K_RETURN:
@@ -204,10 +228,13 @@ while active:
 				else:
 					if e.key == pygame.K_BACKSPACE:
 						D[txtActive]['text'] = D[txtActive]['text'][:-1]
+					elif e.key == pygame.K_DELETE:
+						D[txtActive]['text'] = ""
 					else:
 						D[txtActive]['text'] += e.unicode
 
 					TXTdisplay(txtActive)
+					TXThighlight(txtActive,True)
 
 			else:
 				if (e.key == K_a):
@@ -272,13 +299,21 @@ while active:
 	if D['QUIT'].get('value',0) > 0:
 		active = False
 
+	if D['BRIGHT'].get('value',0) > 0:
+		# it's display only, didn't like being able to select and modify it...
+		D['BRIGHT']['value'] = 0
+		TXTdisplay('BRIGHT')	# turn off highlight (rewrite it)
+		txtActive = ""
+
 	if D['AVERAGE'].get('value',0) > 0:
 		showAverage = not showAverage
 		D['AVERAGE']['value'] = 0
+		TXThighlight(txtActive,False)	# turn off highlight
 		txtActive = ""
     
 	if D['SAVE'].get('value',0) > 0:
 		D['SAVE']['value'] = 0
+		TXThighlight(txtActive,False)	# turn off highlight
 		txtActive = ""
 
 		timestr = time.strftime("%Y%m%d-%H%M%S")

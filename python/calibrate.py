@@ -75,8 +75,6 @@ D = { "CFL":{"pos":(10,bottomRow), "text":"CFL", "align":"BL", "cal":"CFL" },
       "SAVE":{"pos":(width/2,bottomRow),    "text":"SAVE",  "align":"MB", "bg":GREEN, "color":(1,1,1) }
 }
 
-
-
 # surfaces
 # display surface
 lcd = pygame.display.set_mode(resolution)
@@ -223,7 +221,7 @@ def TXTdisplay(key) :
         pygame.draw.rect(txtSurface,WHITE,boxRect,2)
 
 def TXThighlight(key,highlight) :
-    if 'rect' in D[key] :
+    if key in D :
         if highlight :
             pygame.draw.rect(txtSurface,RED,D[key]['rect'],2)
         else:
@@ -292,15 +290,15 @@ while active:
                 
                 calibrate()
 
-        if e.type == KEYUP :
-            if e.key == K_KP1:
+        if e.type == KEYDOWN :
+            if e.key == K_KP1 or e.key == K_z:
                 col436 -= 1
-            if e.key == K_KP3:
+            if e.key == K_KP3 or e.key == K_c:
                 col436 += 1
 
-            if e.key == K_KP7:
+            if e.key == K_KP7 or e.key == K_q:
                 col611 -= 1
-            if e.key == K_KP9:
+            if e.key == K_KP9 or e.key == K_e:
                 col611 += 1
 
             calibrate()
