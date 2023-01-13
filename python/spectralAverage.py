@@ -101,12 +101,13 @@ lcd = pygame.display.set_mode(resolution)
 cam = pygame.camera.Camera(videoDev,resolution)
 cam.start()
 
-D = { "DESC":{"name":"description", "pos":(width/2+30,height-fontSize-10), "text":"description", "align":"TL"},
-      "TAG":{"name":"tag",          "pos":(width/2-30,height-fontSize-10), "text":"prefix",      "align":"TR" },
-	  "BRIGHT":{"name":"brightness","pos":(10,height-fontSize-10),         "text":"",           "align":"TL", "border":False, "bg":BLACK },
-	  "QUIT":{"name":"quit",        "pos":(width-10,height-fontSize-10),   "text":"QUIT", "align":"TR", "bg":RED},
-      "SAVE":{"name":"save",        "pos":(width/2,height-fontSize-10),    "text":"SAVE",  "align":"MT", "bg":GREEN, "color":(1,1,1) },
-      "AVERAGE":{"name":"average",  "pos":(width/4,height-fontSize-10),    "text":"AVERAGE", "align":"MT", "bg":BLUE}
+bottomRow = height-10
+D = { "DESC":{"name":"description", "pos":(width/2+30,bottomRow), "text":"description", "align":"BL"},
+      "TAG":{"name":"tag",          "pos":(width/2-30,bottomRow), "text":"prefix",      "align":"BR" },
+	  "BRIGHT":{"name":"brightness","pos":(10,bottomRow),         "text":"",           "align":"BL", "border":False, "bg":BLACK },
+	  "QUIT":{"name":"quit",        "pos":(width-10,bottomRow),   "text":"QUIT", "align":"BR", "bg":RED},
+      "SAVE":{"name":"save",        "pos":(width/2,bottomRow),    "text":"SAVE",  "align":"MB", "bg":GREEN, "color":(1,1,1) },
+      "AVERAGE":{"name":"average",  "pos":(width/4,bottomRow),    "text":"AVERAGE", "align":"MB", "bg":BLUE}
 }
 
 txtActive = ""		# a text object is active and wants attention. the value is the dictionary key to the object.
@@ -130,13 +131,13 @@ def TXTdisplay(key) :
 
 	txtRect = tempSurface.get_rect()
 	boxRect = txtRect.inflate(10,4)
-	align = D[key].get('align','TR')
-	if align == 'TR' :
-		boxRect.topright = D[key]['pos']
-	if align == 'TL':
-		boxRect.topleft = D[key]['pos']
-	if align == 'MT' :
-		boxRect.midtop = D[key]['pos']
+	align = D[key].get('align','BR')
+	if align == 'BR' :
+		boxRect.bottomright = D[key]['pos']
+	if align == 'BL':
+		boxRect.bottomleft = D[key]['pos']
+	if align == 'MB' :
+		boxRect.midbottom = D[key]['pos']
 
 	#print(f"name: {D[key]['name']}, size: {boxRect.size}")
 	txtRect.center = boxRect.center
@@ -229,7 +230,7 @@ while active:
 			for xCol in range(width):
 				for zColor in range(3):
 					if averageArray[xCol,averageIndex,zColor] > pixelClip:	# value (almost) clipped
-						oorSurface.set_at((xCol,0),(255,0,0))
+						oorSurface.set_at((xCol,0),RED)
 
 					iTotal = 0
 					for yRow in range(averageItems):
@@ -259,7 +260,7 @@ while active:
 		else:
     		# camera image with averaging line
 			lcd.blit(image, (0,0))
-			pygame.draw.line(lcd, (255,0,0), (0,y), (width,y), 1)
+			pygame.draw.line(lcd, RED, (0,y), (width,y), 1)
 
 		# display text layer over everything
 		lcd.blit(txtSurface,(0,0))
