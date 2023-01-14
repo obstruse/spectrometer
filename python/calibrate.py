@@ -49,7 +49,7 @@ GREEN = (0,255,0)
 CYAN  = (0,255,255)
 
 # width determined by length of CSV file; height is 256 for data
-width = len(data)-1
+width = len(data)-1     # minus the header line
 height = 256
 resolution = (width,height)
 (x,y) = (0,0)
@@ -98,6 +98,10 @@ txtSurface.fill(BLACK)
 txtSurface.set_colorkey(BLACK)
 
 # utility functions
+# convert nm to column number
+def nmCol(nm):
+    return nm*m-b
+
 def createGraph():
     mask = CALS[CALindex]['mask']
     pygame.display.set_caption(' Calibrate - '+BASEfile)
@@ -154,10 +158,6 @@ def dashedVLine(surface, xPos, len, color=WHITE, dashLen=8, width=1) :
         
         yPos += dashLen
 
-
-# convert nm to column number
-def nmCol(nm):
-    return nm*m-b
 
 # create calibrate surface
 def calibrate():

@@ -16,12 +16,10 @@ import numpy
 from configparser import ConfigParser
 import argparse
 
-# change to the python directory
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
 # read config file, to override the default (fallback) settings
+configFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),"config.ini")
 config = ConfigParser()
-config.read('config.ini')
+config.read(configFile)
 width = config.getint('Spectrometer','width',fallback=1280)
 height = config.getint('Spectrometer','height',fallback=720)
 videoDev = config.get('Spectrometer','videoDev',fallback='/dev/video0')
@@ -113,19 +111,6 @@ D = {
       "AVERAGE":{"pos":(width/4,bottomRow), "text":"AVERAGE", "align":"MB", "bg":BLUE}
 }
 
-txtActive = ""		# a text object is active and wants attention. the value is the dictionary key to the object.
-
-#utility functions
-def setV4L2( ctrl, value ) :
-    return subprocess.run(shlex.split(f"v4l2-ctl -d {videoDev} --set-ctrl {ctrl}={value}"),stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL).returncode
-
-def getV4L2( ctrl ) :
-    ret = subprocess.run(shlex.split(f"v4l2-ctl -d {videoDev} --get-ctrl {ctrl}"),capture_output=True, text=True)
-    if ret.returncode == 0 :
-        return ret.stdout.split(" ")[1].strip()
-    else :
-        return ""
-
 def TXTdisplay(key) :
 	margin = D[key].get('margin',3)
 
@@ -172,6 +157,19 @@ def TXThighlight(key,highlight) :
         else:
             pygame.draw.rect(txtSurface,WHITE,D[key]['rect'],2)
 
+#utility functions
+def setV4L2( ctrl, value ) :
+    return subprocess.run(shlex.split(f"v4l2-ctl -d {videoDev} --set-ctrl {ctrl}={value}"),stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL).returncode
+
+def getV4L2( ctrl ) :
+    ret = subprocess.run(shlex.split(f"v4l2-ctl -d {videoDev} --get-ctrl {ctrl}"),capture_output=True, text=True)
+    if ret.returncode == 0 :
+        return ret.stdout.split(" ")[1].strip()
+    else :
+        return ""
+
+
+txtActive = ""		# a text object is active and wants attention. the value is the dictionary key to the object.
 
 camBrightness = int(getV4L2("brightness"))
 D['BRIGHT']['text'] = f"Brightness: {camBrightness}"
@@ -190,7 +188,7 @@ while active:
 			active = False
 
 		if (e.type == MOUSEBUTTONDOWN):
-			TXThighlight(txtActive,False)	# trun off previous highlight if any
+			TXThighlight(txtActive,False)	# turn off previous highlight if any
 			txtActive = ""			# a click anywhere ends any active txt inputs
 			for key in list(D):
     			# collide with dictionary
@@ -224,6 +222,7 @@ while active:
 			if txtActive != "":
 				# text input
 				if e.key == pygame.K_RETURN:
+					TXThighlight(txtActive,False)
 					txtActive = ""
 				else:
 					if e.key == pygame.K_BACKSPACE:
