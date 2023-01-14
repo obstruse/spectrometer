@@ -65,6 +65,8 @@ set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'black'
 set label "$SDESC" at graph .99, graph .94 right tc "white" front boxed
 set label "nm" at graph 0.98,character 1 tc "white" front
 
+flag = 0
+if (flag == 1) {
 set arrow from 405,graph 0 to 405,720 as 1
 set label "Hg405" at 405,character 3 tc "white" front
 set arrow from 436,graph 0 to 436,720 as 1
@@ -76,7 +78,7 @@ set arrow from 546,graph 0 to 546,720 as 1
 set label "Hg546" at 546,character 3 tc "white" front
 set arrow from 611,graph 0 to 611,720 as 1
 set label "Eu611" at 611,character 3 tc "white" front
-
+}
 
 plot "$JPG" binary filetype=jpg with rgbimage axes x2y2, \
      "$CSV" using (colNM(\$1)):2 skip 1 ls 1 title "$SNAME" with lines axes x1y1
