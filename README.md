@@ -12,7 +12,7 @@ Camera, diffraction grating, slit are mounted on magnets and placed on a metal s
 
 ![Setup](/images/setup.JPG)
 	
-Covered with black paper to keep room light out.  The old enlarger head seemed like a good idea with its condensing lens and iris.  On the other hand, taking the lens and iris out, just using some layers of wax paper in the negative carrier, works pretty well too... 
+Covered with black paper to keep room light out.  The old enlarger head with its condensing lens and iris helps to focus the light on the diffraction grating and camera.  
 
 Camera connected to Raspberry Pi (4)), running Python/Pygame, Gnuplot, Bash
 
@@ -23,11 +23,48 @@ Camera connected to Raspberry Pi (4)), running Python/Pygame, Gnuplot, Bash
 
 ## Spectrum Averaging
 
-[spectralAverage.py](/python/spectralAverage.py)
+`python/spectralAverage.py`
 
-Use the Python script to select a line through the spectrum, which will get averaged over time and duplicated vertically:
 
-![Averaged](/images/cfl-spectrum-20181215-123051.jpg)
+### Config file (`python/config.ini`):
+
+File | Description
+-|-
+[Spectrometer]
+#width=1280 | image width
+#height=720 | image height
+#videoDev=/dev/video0 | USB camera device
+#averageItems=20 | number of frames to average
+#pixelClip=250 | Out Of Range warning level
+#calibDefault=',,410,900' | default calibration settings, HG463 and EU611
+
+### Command line:
+```
+$ ./spectralAverage.py -h
+usage: spectralAverage.py [-h] [-x WIDTH] [-y HEIGHT] [-v VIDEODEV] [-a AVERAGEITEMS] [-c PIXELCLIP]
+
+Spectrometer
+
+options:
+  -h, --help            show this help message and exit
+  -x WIDTH, --width WIDTH
+  -y HEIGHT, --height HEIGHT
+  -v VIDEODEV, --video VIDEODEV
+  -a AVERAGEITEMS, --average AVERAGEITEMS
+  -c PIXELCLIP, --clip PIXELCLIP
+```
+
+Select a line through the camera spectrum image:  
+
+![cameraImage](/images/camImage.png)
+
+Click `AVERAGE`, and wait a few moments for the image to settle down:
+
+
+![Averaged](/images/spectralAverage.png)
+
+which will get averaged over time and duplicated vertically:
+Output is a JPG of the resulting average, and a CSV with the average of each pixel, and the averages of each color of each pixel. 
 ## Calibration
 
 There are (at least) two ways to calibrate the output:
@@ -64,8 +101,15 @@ Using those values for the scale gives a good match to the CFL calibration:
 
 -- Seems like you should be able to take the RGB values of a pixel, convert it to HSV, then map the Hue (H) to Wavelength (nm).  Almost works, but not quite… 
 
+## Plotting
 
 ## Different Light Sources
-## Plotting
-### Overlay
+
+![](images/uv-spectrum-20230106-113618-plot.png)
+![](images/cfl-spectrum-20181215-123051-plot.png)
+![](images/air-spectrum-20181215-164105-plot.png)
+
+
 ### Intensity
+
+![](images/intensity2.jpg)
