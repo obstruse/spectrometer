@@ -29,9 +29,10 @@ while [ $OPTIND -le "$#" ]; do
     fi
 done
 
-if [[ $CFLplot == 0 && $CISplot == 0 ]]; then
-    $CFLplot = 1
-fi
+#if [[ $CFLplot == 0 && $CISplot == 0 ]]; then
+#    CFLplot=1
+#fi
+
 IN="$file"
 DIR=$(dirname $IN)
 FILE=${IN##*/}
@@ -66,6 +67,8 @@ b = 611.0 - m * $C611                   # calibration offset
 nmCol(nm) = (nm-b)/m
 colNM(col) = col*m+b
 
+#-------------------------
+
 set style line 1 lw 1 lc rgb "white"
 set style arrow 1 nohead front lc rgb "white" dashtype 2
 set style textbox transparent border lc "white"
@@ -93,13 +96,11 @@ set bmargin screen 0
 set rmargin screen 1
 set tmargin screen 1
 
-set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'black' 
 
 set label "$SDESC" at graph .99, graph .94 right tc "white" front boxed
 set label "nm" at graph 0.98,character 1 tc "white" front
 
-flag = 0
-if (flag == 1) {
+if ($CFLplot && $landmarks ) {
 set arrow from 405,graph 0 to 405,720 as 1
 set label "Hg405" at 405,character 3 tc "white" front
 set arrow from 436,graph 0 to 436,720 as 1
@@ -113,9 +114,62 @@ set arrow from 611,graph 0 to 611,720 as 1
 set label "Eu611" at 611,character 3 tc "white" front
 }
 
-plot "$JPG" binary filetype=jpg with rgbimage axes x2y2, \
-     "$CSV" using (colNM(\$1)):2 skip 1 ls 1 title "$SNAME" with lines axes x1y1
+if ($CISplot && $landmarks) {
+set arrow from 474,graph 0 to 474,720 as 1
+set label "474" at 474,character 3 tc "white" front
+set arrow from 536,graph 0 to 536,720 as 1
+set label "536" at 536,character 3 tc "white" front
+set arrow from 595,graph 0 to 595,720 as 1
+set label "595" at 595,character 3 tc "white" front
+}
 
+#set multiplot
+
+#print("$SNAME")
+set style line 2 lc rgb "red"
+set style line 3 lc rgb "green"
+set style line 4 lc rgb "blue"
+
+plot_command = "plot "
+
+if ($image) {
+# in case the image doesn't fit...
+set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'black' 
+set style line 1 lt 1 lw 1 lc rgb "white"
+set style arrow 1 nohead front lc rgb "white" dashtype 2
+set style textbox transparent border lc "white"
+plot_command = sprintf("%s%s,",plot_command,'"$JPG" binary filetype=jpg with rgbimage axes x2y2')
+} else {
+set style line 1 lt 1 lw 1 lc rgb "black"
+set style arrow 1 nohead front lc rgb "black" dashtype 2
+set style textbox transparent border lc "black"
+}
+
+
+if ($CFLplot) {
+plot_command = sprintf("%s%s,",plot_command,'"$CSV" using (colNM(\$1)):2 skip 1 ls 1 title "$SNAME" with lines axes x1y1')
+}
+if ($CISplot) {
+plot_command = sprintf("%s%s,",plot_command,'"$CSV" using (colNM(\$1)):3 skip 1 ls 2 with lines axes x1y1, "" using (colNM(\$1)):4 skip 1 ls 3 with lines axes x1y1, ""  using (colNM(\$1)):5 skip 1 ls 4 with lines axes x1y1')
+}
+
+eval plot_command
+
+#plot "$JPG" binary filetype=jpg with rgbimage axes x2y2
+#}
+
+#if ($CFLplot) {
+#plot "$CSV" using (colNM(\$1)):2 skip 1 ls 1 title "$SNAME" with lines axes x1y1
+#}
+
+#if ($CISplot) {
+#plot "$CSV" using (colNM(\$1)):3 skip 1 ls 2 with lines axes x1y1, \
+#     ""     using (colNM(\$1)):4 skip 1 ls 3 with lines axes x1y1, \
+#     ""     using (colNM(\$1)):5 skip 1 ls 4 with lines axes x1y1,
+#
+#}
+
+#unset multiplot
 pause mouse button2 "button2 to exit"
 
 EOF
