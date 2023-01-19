@@ -22,18 +22,21 @@ CALfile = str(pathlib.Path(args.CSVfile.rstrip('.')).with_suffix('.cal'))
 JPGfile = str(pathlib.Path(args.CSVfile.rstrip('.')).with_suffix('.jpg'))
 BASEfile, ext = os.path.splitext(os.path.basename(args.CSVfile.rstrip('.')))
 
-# read data file
+# read CSV file
 DATAfile = CSVfile
 if os.path.exists(CALfile) :
     DATAfile = CALfile
 with open(DATAfile, mode='r') as file:
     data = list(csv.reader(file))
 
-# calibration values from CSV file
-col436 = int(data[0][2])
-col611 = int(data[0][3])
-nm436 = 436
-nm611 = 611
+# calibration values from CSV file.  They may be present, or null...
+calibrateMultiplier = float(data[0][0] or 0)
+calibrateOffset     = float(data[0][1] or 0)
+# for compatibility with old data files. Not used:
+#col436 = int(data[0][2] or 0)
+#col611 = int(data[0][3] or 0)
+#nm436 = 436
+#nm611 = 611
 
 # initialize display environment
 pygame.display.init()
@@ -54,20 +57,17 @@ height = 256
 resolution = (width,height)
 (x,y) = (0,0)
 
-m = 0   # multiplier for scaling
-b = 0   # offset for scaling
-
-# Calibration options
-CALS = {"CFL":{'nmLeft':436, 'nmRight':611, 'mask':0b10001, 'nmLandmarks':(405, 487, 542,546)},
-        "CIS":{'nmLeft':474, 'nmRight':595, 'mask':0b11110, 'nmLandmarks':(536,)},
+# Calibration Dictionary
+C = {"CFL":{'nmLeft':436, 'nmRight':611, 'mask':0b10001, 'nmLandmarks':(405, 487, 542,546)},
+        "CIS":{'nmLeft':465, 'nmRight':596, 'mask':0b11110, 'nmLandmarks':(529,532)},
         "RGB":{'nmLeft':436, 'nmRight':611, 'mask':0b01110, 'nmLandmarks':()},
         "INT":{'nmLeft':436, 'nmRight':611, 'mask':0b00001, 'nmLandmarks':()}
 }
 CALindex = "CFL"
 
-# buttons
+# Button Dictionary
 bottomRow = height-10
-D = { "CFL":{"pos":(10,bottomRow), "text":"CFL", "align":"BL", "cal":"CFL" },
+B = { "CFL":{"pos":(10,bottomRow), "text":"CFL", "align":"BL", "cal":"CFL" },
       "CIS":{"rightof":"CFL", "text":"CIS", "cal":"CIS"},
       #"RGB":{"rightof":"CIS", "text":"RGB", "cal":"RGB"},
       #"INT":{"rightof":"RGB", "text":"INT", "cal":"INT"},
@@ -82,28 +82,30 @@ lcd = pygame.display.set_mode(resolution)
 # background
 backgroundSurface = pygame.image.load(JPGfile)
 
-# graph
+# graph (CFL or CIS graphs)
 graphSurface = pygame.surface.Surface(resolution)
 
-# calibration
+# calibration (calibration points and landmarks)
 calibrateSurface = pygame.surface.Surface(resolution)
 
 # rectangles
 rectRight = pygame.Rect((resolution[0]/2,0), (resolution[0]/2,resolution[1]))
 rectLeft  = pygame.Rect((0,0),               (resolution[0]/2,resolution[1]))
 
-# text surface
+# text surface (where the buttons go)
 txtSurface = pygame.surface.Surface(resolution)
 txtSurface.fill(BLACK)
 txtSurface.set_colorkey(BLACK)
 
 # utility functions
+
 # convert nm to column number
 def nmCol(nm):
-    return nm*m-b
+    return nm * calibrateMultiplier - calibrateOffset
 
+# create a graph.  The lines included specified by mask. might be average, or red, green, blue
 def createGraph():
-    mask = CALS[CALindex]['mask']
+    mask = C[CALindex]['mask']
     pygame.display.set_caption(' Calibrate - '+BASEfile)
     
     graphSurface.fill(BLACK)
@@ -159,21 +161,28 @@ def dashedVLine(surface, xPos, len, color=WHITE, dashLen=8, width=1) :
         yPos += dashLen
 
 
-# create calibrate surface
-def calibrate():
-    global m, b
-    m = (col611 - col436) / (nm611 - nm436) 
-    b = nm611 * m - col611
+# calculate calibrate multiplier and offset, and create calibrate surface
+def calibrate(nmLeft=0, nmRight=0, colLeft=0, colRight=0):
+    global calibrateMultiplier, calibrateOffset
+
+    if nmLeft != 0 :
+        # parameters are given, calculate multiplier and offset
+        calibrateMultiplier = (colRight - colLeft) / (nmRight - nmLeft) 
+        calibrateOffset     = nmLeft * calibrateMultiplier - colLeft
+    if calibrateMultiplier == 0 :
+        # set default values
+        calibrateMultiplier = (width - 0) / (700 - 400)
+        calibrateOffset     = 400 * calibrateMultiplier - 0
 
     calibrateSurface.fill(BLACK)
     calibrateSurface.set_colorkey(BLACK)
 
-    nmLeft      = CALS[CALindex]['nmLeft']
-    nmRight     = CALS[CALindex]['nmRight']
-    nmLandmarks = CALS[CALindex]['nmLandmarks']
+    nmLeft      = C[CALindex]['nmLeft']
+    nmRight     = C[CALindex]['nmRight']
+    nmLandmarks = C[CALindex]['nmLandmarks']
 
     # calibration points
-    if CALS[CALindex]['mask'] & 0b10000 :
+    if C[CALindex]['mask'] & 0b10000 :
         dashedVLine(calibrateSurface,nmCol(nmLeft) ,resolution[1],WHITE,12,3)
         dashedVLine(calibrateSurface,nmCol(nmRight),resolution[1],WHITE,12,3)
         # camera limits
@@ -182,54 +191,54 @@ def calibrate():
             P = nmCol(L)
             pygame.draw.line(calibrateSurface,RED,(P,7*resolution[1]/8),(P,resolution[1]),3)
 
-            
     # landmarks
     for L in nmLandmarks:
         dashedVLine(calibrateSurface,nmCol(L),resolution[1],WHITE,4,1)
 
-
+# display item from button dictionary (B)
 def TXTdisplay(key) :
+
     # position to the right of a previous entry in the dictionary
-    rightof = D[key].get('rightof',"") 
+    rightof = B[key].get('rightof',"") 
     if rightof != "" :
-        D[key]['pos'] = D[rightof]['rect'].bottomright
-        D[key]['align'] = 'BL'
+        B[key]['pos'] = B[rightof]['rect'].bottomright
+        B[key]['align'] = 'BL'
 
-    tempSurface = font.render(D[key].get('text',""),True,D[key].get('color',WHITE))
+    tempSurface = font.render(B[key].get('text',""),True,B[key].get('color',WHITE))
 
-	# if the line is shorter, need to clear previous box
-    pygame.draw.rect(txtSurface, BLACK, D[key].get('rect',(0,0,0,0)),0)
+	# the line might be shorter, clear the previous box
+    pygame.draw.rect(txtSurface, BLACK, B[key].get('rect',(0,0,0,0)),0)
 
     txtRect = tempSurface.get_rect()
-    boxRect = txtRect.inflate(10,4)
-    align = D[key].get('align','BR')
+    boxRect = txtRect.inflate(10,4)     # give the box some air...
+    align = B[key].get('align','BR')
     if align == 'BR' :
-        boxRect.bottomright = D[key]['pos']
+        boxRect.bottomright = B[key]['pos']
     if align == 'BL':
-        boxRect.bottomleft = D[key]['pos']
+        boxRect.bottomleft = B[key]['pos']
     if align == 'MB' :
-        boxRect.midbottom = D[key]['pos']
+        boxRect.midbottom = B[key]['pos']
 
-    #print(f"name: {D[key]['name']}, size: {boxRect.size}")
-    txtRect.center = boxRect.center
+    #print(f"name: {B[key]['name']}, size: {boxRect.size}")
+    txtRect.center = boxRect.center     # put the text in the center of the box
 
-    D[key]['rect'] = boxRect
+    B[key]['rect'] = boxRect
 
-    pygame.draw.rect(txtSurface,D[key].get('bg',(1,1,1)),boxRect,0)	# text background default to almost black. can't use black: it's transparent
+    pygame.draw.rect(txtSurface,B[key].get('bg',(1,1,1)),boxRect,0)	# text background default to almost black. can't use black: it's transparent
     txtSurface.blit(tempSurface,txtRect)
-    if D[key].get('border',True) :
+    if B[key].get('border',True) :
         pygame.draw.rect(txtSurface,WHITE,boxRect,2)
 
 def TXThighlight(key,highlight) :
-    if key in D :
+    if key in B :
         if highlight :
-            pygame.draw.rect(txtSurface,RED,D[key]['rect'],2)
+            pygame.draw.rect(txtSurface,RED,B[key]['rect'],2)
         else:
-            pygame.draw.rect(txtSurface,WHITE,D[key]['rect'],2)
+            pygame.draw.rect(txtSurface,WHITE,B[key]['rect'],2)
 
 
 # create the text surface
-for key in list(D):
+for key in list(B):
     TXTdisplay(key)
 # highlight the current calibration index
 TXThighlight(CALindex,True)
@@ -258,15 +267,15 @@ while active:
 
         if (e.type == MOUSEBUTTONDOWN):
             txtActive = ""			# a click anywhere ends any active txt inputs
-            for key in list(D):
+            for key in list(B):
                 # collide with dictionary
-                if D[key]['rect'].collidepoint(e.pos):
-                    D[key]['value'] = 1
+                if B[key]['rect'].collidepoint(e.pos):
+                    B[key]['value'] = 1
                     txtActive = key
-                    if 'cal' in D[key] :
+                    if 'cal' in B[key] :
                         # if the key has a 'cal' entry, switch to it and update graph/calibrate
                         TXThighlight(CALindex,False)
-                        CALindex = D[key]['cal']
+                        CALindex = B[key]['cal']
                         TXThighlight(CALindex,True)
                         createGraph()
                         calibrate()
@@ -276,32 +285,34 @@ while active:
                 # didn't collide with any dictionary item
                 # ...so it's a calibration point
                 (x,y) = pygame.mouse.get_pos()
+                nmLeft = C[CALindex]['nmLeft']
+                nmRight = C[CALindex]['nmRight'] 
+                colLeft = nmCol(nmLeft)
+                colRight = nmCol(nmRight)
                 if rectLeft.collidepoint((x,y)):
-                    nmLeft = CALS[CALindex]['nmLeft']
-                    m = (col611 - x) / (nm611 - nmLeft) 
-                    b = nmLeft * m - x
-                    col436 = nmCol(nm436)
+                    colLeft = x
                 
                 if rectRight.collidepoint((x,y)):
-                    nmRight = CALS[CALindex]['nmRight'] 
-                    m = (x - col436) / (nmRight - nm436) 
-                    b = nmRight * m - x
-                    col611 = nmCol(nm611)
+                    colRight = x
                 
-                calibrate()
+                calibrate(nmLeft, nmRight, colLeft, colRight)
 
         if e.type == KEYDOWN :
+            nmLeft = C[CALindex]['nmLeft']
+            nmRight = C[CALindex]['nmRight'] 
+            colLeft = nmCol(nmLeft)
+            colRight = nmCol(nmRight)
             if e.key == K_KP1 or e.key == K_z:
-                col436 -= 1
+                colLeft -= 1
             if e.key == K_KP3 or e.key == K_c:
-                col436 += 1
+                colLeft += 1
 
             if e.key == K_KP7 or e.key == K_q:
-                col611 -= 1
+                colRight -= 1
             if e.key == K_KP9 or e.key == K_e:
-                col611 += 1
+                colRight += 1
 
-            calibrate()
+            calibrate(nmLeft, nmRight, colLeft, colRight)
 
 
         lcd.blit(backgroundSurface,(0,0))
@@ -311,14 +322,16 @@ while active:
         pygame.display.flip()
 
     # after every frame, check actions
-    if D['QUIT'].get('value',0) > 0:
+    if B['QUIT'].get('value',0) > 0:
         active = False
 
-    if D['SAVE'].get('value',0) > 0:
-        D['SAVE']['value'] = 0    
+    if B['SAVE'].get('value',0) > 0:
+        B['SAVE']['value'] = 0    
         with open(CALfile,'w') as CAL:
-            data[0][2] = int(col436)
-            data[0][3] = int(col611)
+            data[0][0] = calibrateMultiplier
+            data[0][1] = calibrateOffset
+            data[0][2] = int(nmCol(436))     # old version
+            data[0][3] = int(nmCol(611))     # old version
             C = csv.writer(CAL)
             C.writerow(data[0])
 
