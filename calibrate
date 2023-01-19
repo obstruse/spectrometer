@@ -37,6 +37,8 @@ calibrateOffset     = float(data[0][1] or 0)
 #col611 = int(data[0][3] or 0)
 #nm436 = 436
 #nm611 = 611
+calibrateTag         = data[0][4]
+calibrateDescription = data[0][5]
 
 # initialize display environment
 pygame.display.init()
@@ -72,7 +74,8 @@ B = { "CFL":{"pos":(10,bottomRow), "text":"CFL", "align":"BL", "cal":"CFL" },
       #"RGB":{"rightof":"CIS", "text":"RGB", "cal":"RGB"},
       #"INT":{"rightof":"RGB", "text":"INT", "cal":"INT"},
 	  "QUIT":{"pos":(width-10,bottomRow),   "text":"QUIT", "align":"BR", "bg":RED},
-      "SAVE":{"pos":(width/2,bottomRow),    "text":"SAVE",  "align":"MB", "bg":GREEN, "color":(1,1,1) }
+      "SAVE":{"pos":(width/2,bottomRow),    "text":"SAVE",  "align":"MB", "bg":GREEN, "color":(1,1,1) },
+      "DESC":{"pos":(width-10,10), "text":calibrateDescription, "align":"TR"}
 }
 
 # surfaces
@@ -103,7 +106,7 @@ txtSurface.set_colorkey(BLACK)
 def nmCol(nm):
     return nm * calibrateMultiplier - calibrateOffset
 
-# create a graph.  The lines included specified by mask. might be average, or red, green, blue
+# create a graph.  The graphs included specified by mask. might be average, or red, green, blue
 def createGraph():
     mask = C[CALindex]['mask']
     pygame.display.set_caption(' Calibrate - '+BASEfile)
@@ -218,6 +221,8 @@ def TXTdisplay(key) :
         boxRect.bottomleft = B[key]['pos']
     if align == 'MB' :
         boxRect.midbottom = B[key]['pos']
+    if align == 'TR' :
+        boxRect.topright = B[key]['pos']
 
     #print(f"name: {B[key]['name']}, size: {boxRect.size}")
     txtRect.center = boxRect.center     # put the text in the center of the box
@@ -327,21 +332,23 @@ while active:
 
     if B['SAVE'].get('value',0) > 0:
         B['SAVE']['value'] = 0    
-        with open(CALfile,'w') as CAL:
+        with open(CALfile,'w') as file:
             data[0][0] = calibrateMultiplier
             data[0][1] = calibrateOffset
             data[0][2] = int(nmCol(436))     # old version
             data[0][3] = int(nmCol(611))     # old version
-            C = csv.writer(CAL)
-            C.writerow(data[0])
+            CAL = csv.writer(file)
+            CAL.writerow(data[0])
 
             if len(data[1]) == 5 :
                 # copy data to CAL file
-                C.writerows(data[1:])
+                CAL.writerows(data[1:])
             else:
                 # old version of spectralAverage didn't write the averaged RGB values
                 # ... so this creates the missing values from the JPG file for compatibility
                 for i in range(1, len(data)) :
-                    C.writerow([data[i][0],data[i][1],backgroundSurface.get_at((i-1,10))[0],backgroundSurface.get_at((i-1,10))[1],backgroundSurface.get_at((i-1,10))[2]])
+                    CAL.writerow([data[i][0],data[i][1],backgroundSurface.get_at((i-1,10))[0],
+                                                      backgroundSurface.get_at((i-1,10))[1],
+                                                      backgroundSurface.get_at((i-1,10))[2]])
 
 

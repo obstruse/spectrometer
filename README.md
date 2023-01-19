@@ -8,7 +8,7 @@ Using a USB camera module similar to:
 - [Arducam OV5648](https://www.arducam.com/product/arducam-ov5648-auto-focus-usb-camera-ub0238-6/)
 - [Newcamermodule 5MP CMOS Sensor](https://newcameramodule.com/product/small-size-5mp-cmos-sensor-usb-2-0-camera-module/)
 
-Camera, diffraction grating, slit are mounted on magnets and placed on a metal sheet.  Positions adjusted until a clear spectrum is seen:
+Camera, diffraction grating, slit, mounted on magnets and arranged on a metal sheet.  Adjust positions until a clear spectrum is seen:
 
 ![Setup](/images/setup.JPG)
 	
@@ -18,14 +18,16 @@ Camera connected to Raspberry Pi (4), running Python/Pygame, Gnuplot, Bash
 
 - Alignment is critical
 - Focus is critical.  The camera I’m using  can be manually focused, but it’s not easy.  I hot-glued a tooth-pick to the side of the lens to make it easier to adjust.
+
+![Focus](/images/focusingAid.png)
 - Exposure is critical.  Too much light will blur the spectrum.
 
 ---
-## Averaging
+## Average
 
 ```
 $ ./spectrometer/average -h
-usage: spectralAverage.py [-h] [-x WIDTH] [-y HEIGHT] [-v VIDEODEV] [-a AVERAGEITEMS] [-c PIXELCLIP]
+usage: average [-h] [-x WIDTH] [-y HEIGHT] [-v VIDEODEV] [-a AVERAGEITEMS] [-c PIXELCLIP]
 
 Spectrometer
 
@@ -40,7 +42,7 @@ options:
 
 ### Configuration file 
 
-File located at: `python/config.ini`.  Commented entries indicate default values:
+File located at: `./spectrometer/config.ini`.  Commented entries indicate default values:
 
 File | Description
 -|-
@@ -69,7 +71,7 @@ Click on `prefix` to set the file name prefix (e.g. 'cfl').  Click on `decriptio
 Output is a JPG of the resulting average, and a CSV with the average of each pixel and the averages of each color. 
 
 ---
-## Calibration
+## Calibrate
 
 ```
 $ ./spectrometer/calibrate -h
@@ -90,9 +92,12 @@ Calibration uses __landmarks__ to calibrate the output:
 
 
 ### Landmarks
-[CFL Landmarks](https://commons.wikimedia.org/wiki/File:Fluorescent_lighting_spectrum_peaks_labelled.svg)
 
-[CIS Landmarks](https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr)
+
+
+[CFL Landmarks](https://commons.wikimedia.org/wiki/File:Fluorescent_lighting_spectrum_peaks_labelled.svg)
+![CFL plain](/images/cfl-plain.png)
+
  Type|Wavelength|&nbsp;
  -|-|-
  __CFL__ | 405nm | mercury
@@ -102,12 +107,21 @@ Calibration uses __landmarks__ to calibrate the output:
  &nbsp; | 546nm | mercury
  &nbsp; | 611nm | europium
  &nbsp; | &nbsp; | &nbsp;
- __CIS__ | 475nm | blue response peak
- &nbsp; | 515nm | green response peak
- &nbsp; | 580nm | red response peak
+
+[CIS Landmarks](https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr)
+![CIS plain](/images/cis-plain.png)
+ Type|Wavelength|&nbsp;
+ -|-|-
+ __CIS__ | 465nm | blue response peak
+ &nbsp; | 532nm | green response peak
+ &nbsp; | 596nm | red response peak
+ &nbsp; | &nbsp;
+ &nbsp; | 529nm | the red bump
 &nbsp; | &nbsp; | &nbsp;
 
+---
 ### CFL Calibration
+
 
 Click `CFL`.  Use the mouse to select the Eu611 peak on the right.  The keys Kp7,Kp9 (Q,E) can be used to fine-tune the selection.  Select the Hg436 peak on the left with the mouse; fine-tune with Kp1,Kp3 (Z,C):
 
@@ -118,25 +132,17 @@ Click `SAVE` - the settings are saved in that calibration file.
 
 ### CIS Calibration
 
+
 Click `CIS`. Use the mouse to select the red response peak on the right and the blue response peak on the left.  Use the keys Kp7,Kp9 (Q,E) and Kp1,Kp3 (Z,C) to fine-tune the selection:
 
 ![calibrate CIS](/images/calibCIS.png)
 
-
-It’s doesn't have any prominate peaks, but it does have three noticeable bumps at the RGB peak sensitivities of the Color Imaging Sensor (CIS):
-
-- Red: 580 nm
-- Green: 515 nm
-- Blue: 475 nm
+Click `SAVE` - the settings are saved in that calibration file.
 
 
-
-Using those values for the scale gives a good match to the CFL calibration:
-
-![CFL-CIS](/images/CFL-CIS.png)
 
 ---
-## Plotting
+## Plot
 
 ```
 $ ./spectrometer/plot -h
@@ -167,6 +173,7 @@ Spectrum image and data are ploted in the range 375nm - 695nm.  Plot opens in gn
 You can also combine plotting options for different results:
 
 ![Everything](images/everything.png)
-
 ![Tower](images/tower.png)
 ![Sunrise](images/sunrise4.png)
+![whatever](/images/spectrum0.png)
+![test](/images/intensity-0.png)
