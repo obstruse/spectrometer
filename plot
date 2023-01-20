@@ -25,6 +25,7 @@ CFLplot=0
 CISplot=0
 INTplot=0
 INT2plot=0
+INT3plot=0
 plotSelected=0
 
 landmarks=1
@@ -41,6 +42,7 @@ while [ $OPTIND -le "$#" ]; do
                    CIS) CISplot=1 ;;
                    INT) INTplot=1 ;;
                    INT2) INT2plot=1 ;;
+                   INT3) INT3plot=1 ;;
                    *) echo "Unknown option --${OPTARG}"
                       usage
                       exit 2 ;;
@@ -80,8 +82,10 @@ if [[ ! -f $CSV ]]; then echo "CSV file not found: ${CSV}"; exit 3; fi
 
 JPG="${BASE}.jpg"
 
-C436=$(awk -F ',' '{print $3;exit}' $CSV)
-C611=$(awk -F ',' '{print $4;exit}' $CSV)
+Multiplier=$(awk -F ',' '{print $1;exit}' $CSV)
+Offset=$(awk -F ',' '{print $2;exit}' $CSV)
+C436=$(awk -F ',' '{print $3;exit}' $CSV)   # old version
+C611=$(awk -F ',' '{print $4;exit}' $CSV)   # old version
 SNAME=$(awk -F ',' '{print $5;exit}' $CSV)
 SDESC=$(awk -F ',' '{print $6;exit}' $CSV)
 
@@ -95,11 +99,15 @@ set term qt size width,height
 
 set datafile separator ","
 
-m = (611.0 - 436.0) / ($C611 - $C436)   # calibration multiplier
-b = 611.0 - m * $C611                   # calibration offset
+m = $Multiplier + 0.0
+b = $Offset + 0.0
+if ( m == 0 ) {                             # old version
+    m = ($C611 - $C436) / (611.0 - 436.0)   # calibration multiplier
+    b = 436.0 * m - $C436                   # calibration offset
+}
 
-nmCol(nm) = (nm-b)/m
-colNM(col) = col*m+b
+nmCol(nm) = nm * m - b
+colNM(col) = (col + b) / m
 
 set y2range [0:height-1]
 set yrange [-30:255]
@@ -189,6 +197,13 @@ unset label
 plot_command = sprintf("%s%s,",plot_command,'"$CSV" using (colNM(\$1)):2:(-12) skip 1 lc rgb "black" with filledcurves fs transparent solid 1.0 axes x1y1')
 }
 if ($INT2plot) {
+#set yrange [0:255]
+#unset grid
+#unset xtics
+#unset label
+plot_command = sprintf("%s%s,",plot_command,'"$CSV" using (colNM(\$1)):2 skip 1 lc rgb "black" with filledcurves below y=256 fs transparent solid 1.0 axes x1y1')
+}
+if ($INT3plot) {
 set yrange [0:255]
 unset grid
 unset xtics
