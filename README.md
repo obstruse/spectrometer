@@ -1,29 +1,32 @@
 # Spectrometer
-![](/images/intensity2.png)
+![](images/intensity2.png)
 
-Based on Public Lab Spectrometer 3.0: https://publiclab.org/notes/abdul/10-13-2016/desktop-spectrometry-starter-kit-3-0-instructions
+Based on Public Lab's [Spectrometer 3.0](https://publiclab.org/notes/abdul/10-13-2016/desktop-spectrometry-starter-kit-3-0-instructions)
 
-Using a USB camera module similar to:
+Python scripts to select, average, and calibrate spectrum data from USB spectrometer. Plotting with Gnuplot.  Running on Raspberry Pi.
 
-- [Arducam OV5648](https://www.arducam.com/product/arducam-ov5648-auto-focus-usb-camera-ub0238-6/)
-- [Newcamermodule 5MP CMOS Sensor](https://newcameramodule.com/product/small-size-5mp-cmos-sensor-usb-2-0-camera-module/)
+## Setup
 
-Camera, diffraction grating, slit, mounted on magnets and arranged on a metal sheet.  Adjust positions until a clear spectrum is seen:
+### Alignment
+- Camera, diffraction grating, slit, mounted on magnets and arranged on a metal sheet:
 
-![Setup](/images/setup.JPG)
-	
-Covered with black paper to keep room light out.  The old enlarger head with its condensing lens and iris helps to focus the light on the diffraction grating and camera.  
+| ![Setup](images/setup.JPG) |
+|:-:|	
+| Enlarger head with condensing lens and iris to focus light on the diffraction grating
 
-Camera connected to Raspberry Pi (4), running Python/Pygame, Gnuplot, Bash
+### Focus
+- Camera should be focused on the collimation slit, approximately 200mm away.
 
-- Alignment is critical
-- Focus is critical.  The camera I’m using  can be manually focused, but it’s not easy.  I hot-glued a tooth-pick to the side of the lens to make it easier to adjust.
-
-![Focus](/images/focusingAid.png)
-- Exposure is critical.  Too much light will blur the spectrum.
+| ![Focus](images/focusingAid.png) |
+|:-:|
+| Camera with Focusing Aid |
+### Exposure
+- Over exposure will clip the image and make it difficult to find peaks
+- Reduce camera brightness to get a solid black background
 
 ---
 ## Average
+
 
 ```
 $ ./spectrometer/average -h
@@ -59,12 +62,12 @@ File | Description
 
 Select a line through the camera spectrum image:  
 
-![cameraImage](/images/camImage.png)
+![cameraImage](images/camImage.png)
 
 Click `AVERAGE`, and wait a few moments for the image to settle down.  If the value of a pixel exceeds the Out Of Range warning level, a red mark will appear at the top of the column.
 
 
-![Averaged](/images/spectralAverage.png)
+![Averaged](images/spectralAverage.png)
 
 Click on `prefix` to set the file name prefix (e.g. 'cfl').  Click on `decription` to set the description (e.g. 'CFL 2700K').  Click `SAVE`.
 
@@ -87,16 +90,16 @@ options:
 ```
 
 Calibration uses __landmarks__ to calibrate the output:
-- calibrate to landmarks in the spectrum (CFL Calibrate)
-- calibrate to landmarks in the camera response (CIS Calibrate)
+- calibrate to landmarks in the spectrum (__CFL Calibration__)
+- calibrate to landmarks in the camera response (__CIS Calibration__)
 
 
-### Landmarks
 
-
+---
+### CFL Calibration
 
 [CFL Landmarks](https://commons.wikimedia.org/wiki/File:Fluorescent_lighting_spectrum_peaks_labelled.svg)
-![CFL plain](/images/cfl-plain.png)
+![CFL plain](images/cfl-plain.png)
 
  Type|Wavelength|&nbsp;
  -|-|-
@@ -108,36 +111,31 @@ Calibration uses __landmarks__ to calibrate the output:
  &nbsp; | 611nm | europium
  &nbsp; | &nbsp; | &nbsp;
 
+Click `CFL`.  Use the mouse to select the Eu611 peak on the right.  The keys Kp7,Kp9 (Q,E) can be used to fine-tune the selection.  Select the Hg436 peak on the left with the mouse; fine-tune with Kp1,Kp3 (Z,C):
+
+![calibrate CFL](images/calibCFL.png)
+
+Click `SAVE` - the settings are saved in the calibration file.
+
+---
+### CIS Calibration
+
 [CIS Landmarks](https://photo.stackexchange.com/questions/122037/why-do-typical-imaging-sensor-colour-filter-spectral-responses-differ-so-much-fr)
-![CIS plain](/images/cis-plain.png)
+![CIS plain](images/cis-plain.png)
  Type|Wavelength|&nbsp;
  -|-|-
  __CIS__ | 465nm | blue response peak
  &nbsp; | 532nm | green response peak
  &nbsp; | 596nm | red response peak
- &nbsp; | &nbsp;
  &nbsp; | 529nm | the red bump
 &nbsp; | &nbsp; | &nbsp;
-
----
-### CFL Calibration
-
-
-Click `CFL`.  Use the mouse to select the Eu611 peak on the right.  The keys Kp7,Kp9 (Q,E) can be used to fine-tune the selection.  Select the Hg436 peak on the left with the mouse; fine-tune with Kp1,Kp3 (Z,C):
-
-![calibrate CFL](/images/calibCFL.png)
-
-Click `SAVE` - the settings are saved in that calibration file.
-
-
-### CIS Calibration
 
 
 Click `CIS`. Use the mouse to select the red response peak on the right and the blue response peak on the left.  Use the keys Kp7,Kp9 (Q,E) and Kp1,Kp3 (Z,C) to fine-tune the selection:
 
-![calibrate CIS](/images/calibCIS.png)
+![calibrate CIS](images/calibCIS.png)
 
-Click `SAVE` - the settings are saved in that calibration file.
+Click `SAVE` - the settings are saved in the calibration file.
 
 
 
@@ -161,7 +159,7 @@ Options:
 
     CSVfile Spectrum data to plot
 ```
-Spectrum image and data are ploted in the range 375nm - 695nm.  Plot opens in gnuplot, use menu bar to save image.
+Spectrum data is ploted with the spectrum background image in the range 375nm - 695nm.  Plot opens in gnuplot; use menu bar to save image.
 
 
 
@@ -170,10 +168,10 @@ Spectrum image and data are ploted in the range 375nm - 695nm.  Plot opens in gn
 ![](images/cfl-spectrum-20181215-123051-plot.png)
 ![Aurora](images/aurora.png)
 
-You can also combine plotting options for different results:
+You can also combine the plot options for different results:
 
 ![Everything](images/everything.png)
 ![Tower](images/tower.png)
 ![Sunrise](images/sunrise4.png)
-![whatever](/images/spectrum0.png)
-![test](/images/intensity-0.png)
+![whatever](images/spectrum0.png)
+![test](images/intensity-0.png)
