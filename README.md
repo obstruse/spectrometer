@@ -170,8 +170,7 @@ Spectrum data is ploted with the spectrum background image in the range 375nm - 
 
 You can also combine the plot options for different results:
 
-![Everything](images/everything.png)
+![Everything](images/tower2.png)
+![Zoom0](images/zoom1.png)
 ![Tower](images/tower.png)
 ![Sunrise](images/sunrise4.png)
-![whatever](images/spectrum0.png)
-![test](images/intensity-0.png)

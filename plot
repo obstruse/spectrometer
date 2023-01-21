@@ -156,7 +156,7 @@ set xtics axis in 50 tc "black"     # put the xtics on the zero axis and tic tex
 set label "$SDESC" at graph .99, graph .94 right tc ls 1 front boxed
 set label "nm" at graph 0.98,character 1 tc ls 1 front
 
-if ($CFLplot && $landmarks ) {
+if ($CFLplot && $landmarks%2 || $landmarks & 2 ) {  #L = 2
 set arrow from 405,graph 0 to 405,720 as 1
 set label "Hg405" at 405,character 3 tc ls 1 front
 set arrow from 436,graph 0 to 436,720 as 1
@@ -170,7 +170,7 @@ set arrow from 611,graph 0 to 611,720 as 1
 set label "Eu611" at 611,character 3 tc ls 1 front
 }
 
-if ($CISplot && $landmarks) {
+if ($CISplot && $landmarks%2 || $landmarks & 4 ) {   #L = 4
 set arrow from 474,graph 0 to 474,720 as 1
 set label "474" at 474,character 3 tc ls 1 front
 set arrow from 536,graph 0 to 536,720 as 1
